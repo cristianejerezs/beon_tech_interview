@@ -1,0 +1,218 @@
+[
+  {
+    "id": "C1",
+    "area": "connectivity",
+    "question": "Which NYC-area origin served the most distinct destinations in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "compare",
+      "metric_id": "distinct_destination_count",
+      "group_by": ["origin"],
+      "filters": [],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": {"field_id": "distinct_destination_count", "direction": "desc"},
+      "row_limit": 1,
+      "chart_intent": "bar",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "C2",
+    "area": "connectivity",
+    "question": "How many distinct destinations did EWR serve in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "aggregate",
+      "metric_id": "distinct_destination_count",
+      "group_by": [],
+      "filters": [{"field_id": "origin", "operator": "eq", "value": "EWR"}],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": null,
+      "row_limit": 1,
+      "chart_intent": "table",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "C3",
+    "area": "connectivity",
+    "question": "What were the three busiest destinations from LGA in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "compare",
+      "metric_id": "flight_count",
+      "group_by": ["destination"],
+      "filters": [{"field_id": "origin", "operator": "eq", "value": "LGA"}],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": {"field_id": "flight_count", "direction": "desc"},
+      "row_limit": 3,
+      "chart_intent": "bar",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "D1",
+    "area": "delays",
+    "question": "Which carrier had the highest mean departure delay in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "compare",
+      "metric_id": "mean_departure_delay",
+      "group_by": ["carrier"],
+      "filters": [],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": {"field_id": "mean_departure_delay", "direction": "desc"},
+      "row_limit": 1,
+      "chart_intent": "bar",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "D2",
+    "area": "delays",
+    "question": "What was the mean arrival delay for flights from JFK in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "aggregate",
+      "metric_id": "mean_arrival_delay",
+      "group_by": [],
+      "filters": [{"field_id": "origin", "operator": "eq", "value": "JFK"}],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": null,
+      "row_limit": 1,
+      "chart_intent": "table",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "D3",
+    "area": "delays",
+    "question": "Show mean departure delay by month during 2013.",
+    "plan": {
+      "status": "ready",
+      "intent": "trend",
+      "metric_id": "mean_departure_delay",
+      "group_by": ["flight_month"],
+      "filters": [],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": {"field_id": "flight_month", "direction": "asc"},
+      "row_limit": 12,
+      "chart_intent": "line",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "A1",
+    "area": "airlines",
+    "question": "Which airlines had the highest mean arrival delays in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "compare",
+      "metric_id": "mean_arrival_delay",
+      "group_by": ["airline_name"],
+      "filters": [],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": {"field_id": "mean_arrival_delay", "direction": "desc"},
+      "row_limit": 3,
+      "chart_intent": "bar",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "A2",
+    "area": "airlines",
+    "question": "Which carriers operated the most flights in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "compare",
+      "metric_id": "flight_count",
+      "group_by": ["carrier"],
+      "filters": [],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": {"field_id": "flight_count", "direction": "desc"},
+      "row_limit": 3,
+      "chart_intent": "bar",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "A3",
+    "area": "airlines",
+    "question": "Compare mean departure delays for airlines operating from EWR in 2013.",
+    "plan": {
+      "status": "ready",
+      "intent": "compare",
+      "metric_id": "mean_departure_delay",
+      "group_by": ["airline_name"],
+      "filters": [{"field_id": "origin", "operator": "eq", "value": "EWR"}],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": {"field_id": "mean_departure_delay", "direction": "desc"},
+      "row_limit": 3,
+      "chart_intent": "bar",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "P1",
+    "area": "aircraft",
+    "question": "Which aircraft manufacturers had the most observed flight activity in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "compare",
+      "metric_id": "aircraft_activity_count",
+      "group_by": ["aircraft_manufacturer"],
+      "filters": [],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": {"field_id": "aircraft_activity_count", "direction": "desc"},
+      "row_limit": 3,
+      "chart_intent": "bar",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "P2",
+    "area": "aircraft",
+    "question": "Which manufacturers had the highest mean listed seats per observed flight in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "compare",
+      "metric_id": "mean_aircraft_seats",
+      "group_by": ["aircraft_manufacturer"],
+      "filters": [],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": {"field_id": "mean_aircraft_seats", "direction": "desc"},
+      "row_limit": 3,
+      "chart_intent": "bar",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  },
+  {
+    "id": "P3",
+    "area": "aircraft",
+    "question": "How many distinct aircraft operated flights from LGA in 2013?",
+    "plan": {
+      "status": "ready",
+      "intent": "aggregate",
+      "metric_id": "aircraft_activity_count",
+      "group_by": [],
+      "filters": [{"field_id": "origin", "operator": "eq", "value": "LGA"}],
+      "time_range": {"start": "2013-01-01", "end": "2013-12-31"},
+      "sort": null,
+      "row_limit": 1,
+      "chart_intent": "table",
+      "clarification_question": null,
+      "unsupported_reason": null
+    }
+  }
+]

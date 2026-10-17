@@ -1,0 +1,179 @@
+[
+  {
+    "id": "C1",
+    "rows": [
+      {
+        "origin": "EWR",
+        "metric_value": 82,
+        "flight_count": 113385,
+        "observation_count": 113385
+      }
+    ]
+  },
+  {
+    "id": "C2",
+    "rows": [
+      {
+        "metric_value": 82,
+        "flight_count": 113385,
+        "observation_count": 113385
+      }
+    ]
+  },
+  {
+    "id": "C3",
+    "rows": [
+      {"destination": "ATL", "metric_value": 7795, "flight_count": 7795, "observation_count": 7795},
+      {"destination": "ORD", "metric_value": 5521, "flight_count": 5521, "observation_count": 5521},
+      {"destination": "CLT", "metric_value": 4523, "flight_count": 4523, "observation_count": 4523}
+    ]
+  },
+  {
+    "id": "D1",
+    "rows": [
+      {
+        "carrier": "F9",
+        "metric_value": 20.08976377952756,
+        "flight_count": 635,
+        "observation_count": 635
+      }
+    ]
+  },
+  {
+    "id": "D2",
+    "rows": [
+      {
+        "metric_value": 5.253779709691478,
+        "flight_count": 89491,
+        "observation_count": 89491
+      }
+    ]
+  },
+  {
+    "id": "D3",
+    "rows": [
+      {"flight_month": "2013-01-01T00:00:00", "metric_value": 10.688707990358816, "flight_count": 21989, "observation_count": 21989},
+      {"flight_month": "2013-02-01T00:00:00", "metric_value": 11.064591401052526, "flight_count": 20142, "observation_count": 20142},
+      {"flight_month": "2013-03-01T00:00:00", "metric_value": 14.083298097251586, "flight_count": 23650, "observation_count": 23650},
+      {"flight_month": "2013-04-01T00:00:00", "metric_value": 14.006702527322405, "flight_count": 23424, "observation_count": 23424},
+      {"flight_month": "2013-05-01T00:00:00", "metric_value": 13.115029842647857, "flight_count": 23959, "observation_count": 23959},
+      {"flight_month": "2013-06-01T00:00:00", "metric_value": 21.10718892424112, "flight_count": 23258, "observation_count": 23258},
+      {"flight_month": "2013-07-01T00:00:00", "metric_value": 22.172375279225616, "flight_count": 24174, "observation_count": 24174},
+      {"flight_month": "2013-08-01T00:00:00", "metric_value": 12.99962947715109, "flight_count": 24290, "observation_count": 24290},
+      {"flight_month": "2013-09-01T00:00:00", "metric_value": 6.964363509627952, "flight_count": 22954, "observation_count": 22954},
+      {"flight_month": "2013-10-01T00:00:00", "metric_value": 6.792622544974418, "flight_count": 24236, "observation_count": 24236},
+      {"flight_month": "2013-11-01T00:00:00", "metric_value": 5.817349798563671, "flight_count": 22836, "observation_count": 22836},
+      {"flight_month": "2013-12-01T00:00:00", "metric_value": 17.022718404508996, "flight_count": 23065, "observation_count": 23065}
+    ]
+  },
+  {
+    "id": "A1",
+    "rows": [
+      {
+        "airline_name": "Frontier Airlines Inc.",
+        "metric_value": 21.721259842519686,
+        "flight_count": 635,
+        "observation_count": 635
+      },
+      {
+        "airline_name": "AirTran Airways Corporation",
+        "metric_value": 19.025707777416205,
+        "flight_count": 3073,
+        "observation_count": 3073
+      },
+      {
+        "airline_name": "ExpressJet Airlines Inc.",
+        "metric_value": 14.902700607313607,
+        "flight_count": 54173,
+        "observation_count": 54173
+      }
+    ]
+  },
+  {
+    "id": "A2",
+    "rows": [
+      {"carrier": "UA", "metric_value": 55802, "flight_count": 55802, "observation_count": 55802},
+      {"carrier": "EV", "metric_value": 54173, "flight_count": 54173, "observation_count": 54173},
+      {"carrier": "B6", "metric_value": 50194, "flight_count": 50194, "observation_count": 50194}
+    ]
+  },
+  {
+    "id": "A3",
+    "rows": [
+      {
+        "airline_name": "SkyWest Airlines Inc.",
+        "metric_value": 20.833333333333332,
+        "flight_count": 6,
+        "observation_count": 6
+      },
+      {
+        "airline_name": "ExpressJet Airlines Inc.",
+        "metric_value": 19.17180636791916,
+        "flight_count": 43939,
+        "observation_count": 43939
+      },
+      {
+        "airline_name": "Southwest Airlines Co.",
+        "metric_value": 17.61962692619627,
+        "flight_count": 6165,
+        "observation_count": 6165
+      }
+    ]
+  },
+  {
+    "id": "P1",
+    "rows": [
+      {
+        "aircraft_manufacturer": "BOEING",
+        "metric_value": 1630,
+        "flight_count": 80345,
+        "observation_count": 1630
+      },
+      {
+        "aircraft_manufacturer": "AIRBUS INDUSTRIE",
+        "metric_value": 400,
+        "flight_count": 40421,
+        "observation_count": 400
+      },
+      {
+        "aircraft_manufacturer": "BOMBARDIER INC",
+        "metric_value": 368,
+        "flight_count": 28272,
+        "observation_count": 368
+      }
+    ]
+  },
+  {
+    "id": "P2",
+    "rows": [
+      {
+        "aircraft_manufacturer": "AIRBUS",
+        "metric_value": 203.6149369544132,
+        "flight_count": 44333,
+        "observation_count": 44333
+      },
+      {
+        "aircraft_manufacturer": "AIRBUS INDUSTRIE",
+        "metric_value": 183.73706736597313,
+        "flight_count": 40421,
+        "observation_count": 40421
+      },
+      {
+        "aircraft_manufacturer": "BOEING",
+        "metric_value": 173.71947227581057,
+        "flight_count": 80345,
+        "observation_count": 80345
+      }
+    ]
+  },
+  {
+    "id": "P3",
+    "rows": [
+      {
+        "metric_value": 2465,
+        "flight_count": 75101,
+        "observation_count": 2465
+      }
+    ]
+  }
+]

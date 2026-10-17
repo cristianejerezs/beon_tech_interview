@@ -7,8 +7,9 @@ exploring the supplied historical NYC-area airport datasets through natural-lang
 It will turn supported questions into evidence-grounded reports with explanatory text, tables,
 and appropriate charts.
 
-**Current status:** Specification, architecture, contracts, and implementation tasks are prepared.
-Application implementation has not started. The task breakdown and acceptance expectations are in
+**Current status:** Implementation has progressed through the core analytics, report, history,
+consent, export, and UI flows. Provider/model acceptance evaluation and external release gates
+remain outstanding; the task breakdown and acceptance expectations are in
 [`specs/001-airport-analytics-platform/tasks.md`](./specs/001-airport-analytics-platform/tasks.md).
 
 ## Planned solution
@@ -96,10 +97,11 @@ approved by the deployment owner.
 
 ## Implementation token-usage record
 
-Implementation has **not started**, so no implementation token usage is recorded yet. When
-implementation begins, update this section with measured usage for implementation work. Record
-only usage figures available from the Copilot/session usage report or another authoritative
-meter; do not estimate or invent token counts.
+Implementation has started. The current environment does not provide an authoritative Copilot or
+session token-usage report, so token counts are not available yet. Record only usage figures
+available from the Copilot/session usage report or another authoritative meter; do not estimate or
+invent token counts. Update this record at implementation milestones when authoritative figures
+are available.
 
 Keep this record distinct from the application's hosted-model usage ledger: runtime inference
 usage and cost are tracked by the application against the monthly USD 10 cap, while this section
@@ -107,4 +109,4 @@ records tokens used to build the solution.
 
 | Date / work period | Implementation phase or task IDs | Usage source / model | Input tokens | Cached input tokens | Output tokens | Total tokens | Notes |
 |---|---|---|---:|---:|---:|---:|---|
-| Pending implementation | Not started | Not available | — | — | — | — | Populate from an authoritative usage report when implementation begins. |
+| 2026-10-17 | Setup and implementation through UI/history/consent integration (T001–T050) | Authoritative usage report unavailable | — | — | — | — | Implementation milestone recorded; counts withheld rather than estimated. Update when an authoritative usage report becomes accessible. |

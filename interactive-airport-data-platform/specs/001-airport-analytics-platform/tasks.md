@@ -12,26 +12,26 @@ and measurable correctness, privacy, budget, and isolation criteria.
 
 **Purpose**: Initialize the Python application and its shared project structure.
 
-- [ ] T001 Create `pyproject.toml` for Python 3.12 with Streamlit, DuckDB, LangChain core and Ollama integration, Pydantic, Plotly, SQLite support, pytest, and Streamlit AppTest dependencies.
-- [ ] T002 [P] Create the application package, test directories, and package entry point in `src/airport_analytics/__init__.py`, `src/airport_analytics/`, `tests/unit/`, `tests/integration/`, `tests/browser/`, and `app.py`.
-- [ ] T003 [P] Add environment-variable configuration examples and secret-handling guidance in `.env.example` and `README.md`; do not include API keys, provider credentials, or real identity-provider secrets. At implementation start and after each implementation milestone, record authoritative Copilot/session token usage in `read_me.md`; never estimate or invent usage figures.
-- [ ] T004 Configure formatting, linting, and test discovery in `pyproject.toml`.
+- [X] T001 Create `pyproject.toml` for Python 3.12 with Streamlit, DuckDB, LangChain core and Ollama integration, Pydantic, Plotly, SQLite support, pytest, and Streamlit AppTest dependencies.
+- [X] T002 [P] Create the application package, test directories, and package entry point in `src/airport_analytics/__init__.py`, `src/airport_analytics/`, `tests/unit/`, `tests/integration/`, `tests/browser/`, and `app.py`.
+- [X] T003 [P] Add environment-variable configuration examples and secret-handling guidance in `.env.example` and `README.md`; do not include API keys, provider credentials, or real identity-provider secrets. At implementation start and after each implementation milestone, record authoritative Copilot/session token usage in `read_me.md`; never estimate or invent usage figures.
+- [X] T004 Configure formatting, linting, and test discovery in `pyproject.toml`.
 
 ## Phase 2: Foundational
 
 **Purpose**: Complete shared identity, data, persistence, and safety foundations before story work.
 
-- [ ] T005 Implement typed application settings, provider selection, model token ceilings, and secret loading in `src/airport_analytics/config.py`; reject missing credentials for a configured hosted provider and reject unknown provider identifiers.
-- [ ] T006 Implement the versioned closed dataset and metric catalog in `src/airport_analytics/data/catalog.py`, including only source-verified tables, field types, filterable fields, dimensions, metrics, and declared join relationships.
-- [ ] T007 Implement source snapshot loading and validation in `src/airport_analytics/data/loader.py` and `src/airport_analytics/data/validation.py`; record per-file SHA-256, row count, headers, schema version, missingness, and join-key coverage before analytics is enabled.
-- [ ] T008 Implement OIDC analyst identity resolution and server-side authorization in `src/airport_analytics/auth.py`; derive the stable analyst key from issuer and subject, never mutable email, and require ownership checks on private resources.
-- [ ] T009 Implement SQLite connection management, schema initialization, and transactional repository helpers in `src/airport_analytics/storage.py`; keep report, consent, shared-reuse, and model-usage records locally persisted.
-- [ ] T010 [P] Implement common typed error categories and user-safe error presentation in `src/airport_analytics/errors.py`; distinguish invalid question plans, unsupported analysis, provider failure, exhausted budget, and unavailable datasets without leaking secrets.
-- [ ] T011 [P] Create shared Pydantic types for dataset snapshots, analysis plans, validated results, and report scope in `src/airport_analytics/models.py`, consistent with `data-model.md` and `contracts/analysis-plan.schema.json`.
-- [ ] T012 Implement deployment-wide monthly spend reservations in `src/airport_analytics/analytics/budget.py` and SQLite schema in `src/airport_analytics/storage.py`; cap metered model and enabled tracing charges at USD 10 per UTC calendar month, atomically count in-flight reservations, reject unbounded paid calls, and reconcile settled usage.
-- [ ] T013 Implement explicit model-provider policy and provider-use disclosure state in `src/airport_analytics/analytics/provider_policy.py`; distinguish provider data-use disclosure from FAQ/report reuse consent and do not silently switch providers.
-- [ ] T014 Implement a LangChain model adapter interface and explicit Ollama/local plus hosted-provider construction in `src/airport_analytics/analytics/model_client.py`; enforce configured provider identity and return provider usage metadata when available.
-- [ ] T015 Implement LangSmith tracing configuration in `src/airport_analytics/observability/tracing.py`; tracing must be disabled by default, and enabling it must require explicit operator configuration and a disclosure flag.
+- [X] T005 Implement typed application settings, provider selection, model token ceilings, and secret loading in `src/airport_analytics/config.py`; reject missing credentials for a configured hosted provider and reject unknown provider identifiers.
+- [X] T006 Implement the versioned closed dataset and metric catalog in `src/airport_analytics/data/catalog.py`, including only source-verified tables, field types, filterable fields, dimensions, metrics, and declared join relationships.
+- [X] T007 Implement source snapshot loading and validation in `src/airport_analytics/data/loader.py` and `src/airport_analytics/data/validation.py`; record per-file SHA-256, row count, headers, schema version, missingness, and join-key coverage before analytics is enabled.
+- [X] T008 Implement OIDC analyst identity resolution and server-side authorization in `src/airport_analytics/auth.py`; derive the stable analyst key from issuer and subject, never mutable email, and require ownership checks on private resources.
+- [X] T009 Implement SQLite connection management, schema initialization, and transactional repository helpers in `src/airport_analytics/storage.py`; keep report, consent, shared-reuse, and model-usage records locally persisted.
+- [X] T010 [P] Implement common typed error categories and user-safe error presentation in `src/airport_analytics/errors.py`; distinguish invalid question plans, unsupported analysis, provider failure, exhausted budget, and unavailable datasets without leaking secrets.
+- [X] T011 [P] Create shared Pydantic types for dataset snapshots, analysis plans, validated results, and report scope in `src/airport_analytics/models.py`, consistent with `data-model.md` and `contracts/analysis-plan.schema.json`.
+- [X] T012 Implement deployment-wide monthly spend reservations in `src/airport_analytics/analytics/budget.py` and SQLite schema in `src/airport_analytics/storage.py`; cap metered model and enabled tracing charges at USD 10 per UTC calendar month, atomically count in-flight reservations, reject unbounded paid calls, and reconcile settled usage.
+- [X] T013 Implement explicit model-provider policy and provider-use disclosure state in `src/airport_analytics/analytics/provider_policy.py`; distinguish provider data-use disclosure from FAQ/report reuse consent and do not silently switch providers.
+- [X] T014 Implement a LangChain model adapter interface and explicit Ollama/local plus hosted-provider construction in `src/airport_analytics/analytics/model_client.py`; enforce configured provider identity and return provider usage metadata when available.
+- [X] T015 Implement LangSmith tracing configuration in `src/airport_analytics/observability/tracing.py`; tracing must be disabled by default, and enabling it must require explicit operator configuration and a disclosure flag.
 
 **Checkpoint**: Shared project, identity, dataset catalog, persistence, provider selection, and budget foundations are ready.
 
@@ -43,26 +43,26 @@ and measurable correctness, privacy, budget, and isolation criteria.
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Create a fixed 12-question golden corpus (three supported questions per analysis area) with independent expected metrics and scope in `tests/fixtures/golden_questions.json` and `tests/fixtures/golden_expected_results.json`; add exact-result integration coverage in `tests/integration/test_question_reports.py`.
-- [ ] T017 [P] [US1] Add structured-plan contract and rejection tests for unknown metric/dimension/filter, invalid operator/value, excessive row limit, clarification, and unsupported status in `tests/unit/test_analysis_plan.py`; add empty, non-text, whitespace-only, 2,001-code-point-after-trimming, and maximum-length question tests in `tests/unit/test_question_validation.py`, proving invalid input is rejected before model invocation or budget reservation.
-- [ ] T018 [P] [US1] Add query-compiler tests proving SQL-shaped model output, unknown identifiers, and injection-shaped filter values cannot produce executable arbitrary SQL in `tests/unit/test_query_compiler.py`.
-- [ ] T019 [P] [US1] Add budget tests for shared-cap enforcement, concurrent reservation transactions, UTC month rollover, unbounded price, provider fees/taxes/FX, late invoices attributed to request-acceptance month, partial responses, failed-call reconciliation, and usage accounting in `tests/unit/test_budget.py`; prove automatic retry occurs only on provider-confirmed non-acceptance, uncertain reservations remain held until reconciliation, and reconciled charges above reservation are recorded and surfaced while further paid calls are blocked when the cap is exhausted.
-- [ ] T020 [P] [US1] Add provider-policy tests proving provider disclosure occurs before each provider's first hosted call and is separate from reuse consent in `tests/unit/test_provider_policy.py`.
-- [ ] T021 [P] [US1] Add tests that LangSmith tracing is disabled by default and cannot start without operator configuration and disclosure in `tests/unit/test_tracing.py`.
+- [X] T016 [P] [US1] Create a fixed 12-question golden corpus (three supported questions per analysis area) with independent expected metrics and scope in `tests/fixtures/golden_questions.json` and `tests/fixtures/golden_expected_results.json`; add exact-result integration coverage in `tests/integration/test_question_reports.py`.
+- [X] T017 [P] [US1] Add structured-plan contract and rejection tests for unknown metric/dimension/filter, invalid operator/value, excessive row limit, clarification, and unsupported status in `tests/unit/test_analysis_plan.py`; add empty, non-text, whitespace-only, 2,001-code-point-after-trimming, and maximum-length question tests in `tests/unit/test_question_validation.py`, proving invalid input is rejected before model invocation or budget reservation.
+- [X] T018 [P] [US1] Add query-compiler tests proving SQL-shaped model output, unknown identifiers, and injection-shaped filter values cannot produce executable arbitrary SQL in `tests/unit/test_query_compiler.py`.
+- [X] T019 [P] [US1] Add budget tests for shared-cap enforcement, concurrent reservation transactions, UTC month rollover, unbounded price, provider fees/taxes/FX, late invoices attributed to request-acceptance month, partial responses, failed-call reconciliation, and usage accounting in `tests/unit/test_budget.py`; prove automatic retry occurs only on provider-confirmed non-acceptance, uncertain reservations remain held until reconciliation, and reconciled charges above reservation are recorded and surfaced while further paid calls are blocked when the cap is exhausted.
+- [X] T020 [P] [US1] Add provider-policy tests proving provider disclosure occurs before each provider's first hosted call and is separate from reuse consent in `tests/unit/test_provider_policy.py`.
+- [X] T021 [P] [US1] Add tests that LangSmith tracing is disabled by default and cannot start without operator configuration and disclosure in `tests/unit/test_tracing.py`.
 
 ### Implementation for User Story 1
 
-- [ ] T022 [US1] Implement analysis-plan parsing and JSON Schema validation in `src/airport_analytics/analytics/plan_schema.py` using `contracts/analysis-plan.schema.json`; reject extra fields and validate identifiers against `src/airport_analytics/data/catalog.py`.
-- [ ] T023 [US1] Implement the deterministic plan-to-DuckDB compiler in `src/airport_analytics/analytics/query_compiler.py`; compile only allowlisted metrics, dimensions, joins, filters, and bounded sort/row limits into parameterized read-only `SELECT` queries.
-- [ ] T024 [US1] Implement read-only DuckDB dataset registration and bounded query execution in `src/airport_analytics/analytics/execution.py`; apply query timeout/result limits and preserve missing values rather than treating them as zero.
-- [ ] T025 [US1] Implement LangChain structured analysis-plan generation in `src/airport_analytics/analytics/model_client.py`; accept only a non-empty trimmed plain-text question of at most 2,000 Unicode characters, pass only that question, minimal active structured follow-up context, schema/metric glossary, and plan schema, never raw source rows, credentials, analyst identity, saved/private report history, or database tools.
-- [ ] T026 [US1] Implement hosted-call budget reservation, provider disclosure gating, usage settlement, and explicit provider-failure handling in `src/airport_analytics/analytics/model_client.py` and `src/airport_analytics/analytics/budget.py`; include directly attributable provider fees/taxes and FX charges, attribute costs to the accepted-request UTC month, reconcile partial responses, retry only on provider-confirmed non-acceptance, retain uncertain reservations, and on cap exhaustion offer an explicit local switch without automatic fallback.
-- [ ] T027 [P] [US1] Implement deterministic metric definitions, unit/population descriptions, missing-value handling, matched/unmatched join counts and coverage, and analytical-term glossary in `src/airport_analytics/analytics/metrics.py`.
-- [ ] T028 [US1] Implement evidence-grounded report generation in `src/airport_analytics/reports/generation.py`; generate narrative only from validated aggregate results and metric definitions, and verify numeric claims against those results.
-- [ ] T029 [US1] Implement deterministic chart/table selection and report rendering in `src/airport_analytics/reports/rendering.py`; choose visuals from validated result shape and show data period, material scope, sample counts, matched/unmatched join coverage, and limitations.
-- [ ] T030 [US1] Implement the initial authenticated question/report page in `app.py`; collect natural-language questions, display a focused clarification or unsupported-data explanation when needed, and render a complete report only after a valid analysis plan executes.
-- [ ] T031 [US1] Implement provider selection and provider-use disclosure in the question flow in `app.py`; disclose the selected hosted provider and product-improvement terms before its first hosted request and make the disclosure distinct from FAQ/reuse consent.
-- [ ] T032 [US1] Implement monthly budget status, hosted-call blocking, and analyst-initiated local-provider switch in `app.py`; when the deployment cap is exhausted, stop hosted requests and either switch only after explicit analyst action or explain hosted service resumes next UTC month.
+- [X] T022 [US1] Implement analysis-plan parsing and JSON Schema validation in `src/airport_analytics/analytics/plan_schema.py` using `contracts/analysis-plan.schema.json`; reject extra fields and validate identifiers against `src/airport_analytics/data/catalog.py`.
+- [X] T023 [US1] Implement the deterministic plan-to-DuckDB compiler in `src/airport_analytics/analytics/query_compiler.py`; compile only allowlisted metrics, dimensions, joins, filters, and bounded sort/row limits into parameterized read-only `SELECT` queries.
+- [X] T024 [US1] Implement read-only DuckDB dataset registration and bounded query execution in `src/airport_analytics/analytics/execution.py`; apply query timeout/result limits and preserve missing values rather than treating them as zero.
+- [X] T025 [US1] Implement LangChain structured analysis-plan generation in `src/airport_analytics/analytics/model_client.py`; accept only a non-empty trimmed plain-text question of at most 2,000 Unicode code points, pass only that question, minimal active structured follow-up context, schema/metric glossary, and plan schema, never raw source rows, credentials, analyst identity, saved/private report history, or database tools.
+- [X] T026 [US1] Implement hosted-call budget reservation, provider disclosure gating, usage settlement, and explicit provider-failure handling in `src/airport_analytics/analytics/model_client.py` and `src/airport_analytics/analytics/budget.py`; include directly attributable provider fees/taxes and FX charges, attribute costs to the accepted-request UTC month, reconcile partial responses, retry only on provider-confirmed non-acceptance, retain uncertain reservations, and on cap exhaustion offer an explicit local switch without automatic fallback.
+- [X] T027 [P] [US1] Implement deterministic metric definitions, unit/population descriptions, missing-value handling, matched/unmatched join counts and coverage, and analytical-term glossary in `src/airport_analytics/analytics/metrics.py`.
+- [X] T028 [US1] Implement evidence-grounded report generation in `src/airport_analytics/reports/generation.py`; generate narrative only from validated aggregate results and metric definitions, and verify numeric claims against those results.
+- [X] T029 [US1] Implement deterministic chart/table selection and report rendering in `src/airport_analytics/reports/rendering.py`; choose visuals from validated result shape and show data period, material scope, sample counts, matched/unmatched join coverage, and limitations.
+- [X] T030 [US1] Implement the initial authenticated question/report page in `app.py`; collect natural-language questions, display a focused clarification or unsupported-data explanation when needed, and render a complete report only after a valid analysis plan executes.
+- [X] T031 [US1] Implement provider selection and provider-use disclosure in the question flow in `app.py`; disclose the selected hosted provider and product-improvement terms before its first hosted request and make the disclosure distinct from FAQ/reuse consent.
+- [X] T032 [US1] Implement monthly budget status, hosted-call blocking, and analyst-initiated local-provider switch in `app.py`; when the deployment cap is exhausted, stop hosted requests and either switch only after explicit analyst action or explain hosted service resumes next UTC month.
 
 **Checkpoint**: User Story 1 provides a safe, independently verifiable question-to-report MVP.
 
@@ -74,13 +74,13 @@ and measurable correctness, privacy, budget, and isolation criteria.
 
 ### Tests for User Story 2
 
-- [ ] T033 [P] [US2] Add follow-up tests for added, replaced, and contradictory date/airport/airline filters and visible active scope in `tests/integration/test_follow_up_questions.py`.
-- [ ] T034 [P] [US2] Add tests that follow-up context sent to a hosted model is bounded and excludes private report history beyond the minimum necessary current context in `tests/unit/test_follow_up_context.py`.
+- [X] T033 [P] [US2] Add follow-up tests for added, replaced, and contradictory date/airport/airline filters and visible active scope in `tests/integration/test_follow_up_questions.py`.
+- [X] T034 [P] [US2] Add tests that follow-up context sent to a hosted model is bounded and excludes private report history beyond the minimum necessary current context in `tests/unit/test_follow_up_context.py`.
 
 ### Implementation for User Story 2
 
-- [ ] T035 [US2] Implement follow-up context construction and scope replacement rules in `src/airport_analytics/analytics/follow_up.py`; retain only relevant current question/plan context and resolve changed filters explicitly.
-- [ ] T036 [US2] Integrate follow-up planning, validation, query recompilation, and visible scope updates in `src/airport_analytics/reports/generation.py` and `app.py`; each follow-up must pass the same plan, provider disclosure, and budget checks as a first question.
+- [X] T035 [US2] Implement follow-up context construction and scope replacement rules in `src/airport_analytics/analytics/follow_up.py`; retain only relevant current question/plan context and resolve changed filters explicitly.
+- [X] T036 [US2] Integrate follow-up planning, validation, query recompilation, and visible scope updates in `src/airport_analytics/reports/generation.py` and `app.py`; each follow-up must pass the same plan, provider disclosure, and budget checks as a first question.
 
 ## Phase 5: User Story 3 - Understand the Report (Priority: P2)
 
@@ -90,15 +90,15 @@ and measurable correctness, privacy, budget, and isolation criteria.
 
 ### Tests for User Story 3
 
-- [ ] T037 [P] [US3] Add tests for metric definitions, units, population, denominators, relevant analytical-term explanations, and result/narrative consistency in `tests/integration/test_report_evidence.py`.
-- [ ] T038 [P] [US3] Add PDF and CSV export-content tests, including full narrative/report sections and tabular result fidelity, in `tests/integration/test_report_exports.py`.
+- [X] T037 [P] [US3] Add tests for metric definitions, units, population, denominators, relevant analytical-term explanations, and result/narrative consistency in `tests/integration/test_report_evidence.py`.
+- [X] T038 [P] [US3] Add PDF and CSV export-content tests, including full narrative/report sections and tabular result fidelity, in `tests/integration/test_report_exports.py`.
 
 ### Implementation for User Story 3
 
-- [ ] T039 [US3] Extend report composition in `src/airport_analytics/reports/generation.py` and `src/airport_analytics/reports/rendering.py` to include metric definitions, units, numerator/denominator where relevant, population, period, sample size, glossary explanations, and material limitations.
-- [ ] T040 [US3] Implement complete-report PDF export in `src/airport_analytics/reports/export.py`; include the report question, answer, metric definitions, visual/table context, provenance, and limitations.
-- [ ] T041 [US3] Implement result-table CSV export in `src/airport_analytics/reports/export.py`; serialize only the current report's tabular result data with stable headers and correct null handling.
-- [ ] T042 [US3] Add authenticated PDF/CSV export controls to `app.py`; verify report ownership before rendering or returning any export.
+- [X] T039 [US3] Extend report composition in `src/airport_analytics/reports/generation.py` and `src/airport_analytics/reports/rendering.py` to include metric definitions, units, numerator/denominator where relevant, population, period, sample size, glossary explanations, and material limitations.
+- [X] T040 [US3] Implement complete-report PDF export in `src/airport_analytics/reports/export.py`; include the report question, answer, metric definitions, visual/table context, provenance, and limitations.
+- [X] T041 [US3] Implement result-table CSV export in `src/airport_analytics/reports/export.py`; serialize only the current report's tabular result data with stable headers and correct null handling.
+- [X] T042 [US3] Add authenticated PDF/CSV export controls to `app.py`; verify report ownership before rendering or returning any export.
 
 ## Phase 6: User Story 4 - Keep Reports Private and Control Reuse (Priority: P2)
 
@@ -108,17 +108,17 @@ and measurable correctness, privacy, budget, and isolation criteria.
 
 ### Tests for User Story 4
 
-- [ ] T043 [P] [US4] Add cross-analyst authorization tests for report listing, detail lookup, deletion, and export in `tests/integration/test_report_ownership.py`.
-- [ ] T044 [P] [US4] Add consent-state transition tests for initial decline, later opt-in, withdrawal, re-enable, new session, and preserved prior reuse artifacts in `tests/integration/test_consent_transitions.py`.
-- [ ] T045 [P] [US4] Add report-history retention tests verifying only the ten newest private reports remain per analyst and private payloads beyond the cap are removed without deleting separately retained shared artifacts in `tests/integration/test_report_retention.py`.
+- [X] T043 [P] [US4] Add cross-analyst authorization tests for report listing, detail lookup, deletion, and export in `tests/integration/test_report_ownership.py`.
+- [X] T044 [P] [US4] Add consent-state transition tests for initial decline, later opt-in, withdrawal, re-enable, new session, and preserved prior reuse artifacts in `tests/integration/test_consent_transitions.py`.
+- [X] T045 [P] [US4] Add report-history retention tests verifying only the ten newest private reports remain per analyst and private payloads beyond the cap are removed without deleting separately retained shared artifacts in `tests/integration/test_report_retention.py`.
 
 ### Implementation for User Story 4
 
-- [ ] T046 [US4] Implement private report and shared-reuse artifact repositories in `src/airport_analytics/history/repository.py`; enforce analyst ownership at every repository operation and retain only ten private reports per analyst.
-- [ ] T047 [US4] Implement append-only consent-event persistence in `src/airport_analytics/consent/repository.py`; record analyst/session, purpose, action, timestamp, and notice version.
-- [ ] T048 [US4] Implement session-scoped reuse consent state transitions in `src/airport_analytics/consent/service.py`; start disabled, permit later opt-in/withdrawal/re-enable, and reuse only content created during active consent.
-- [ ] T049 [US4] Implement shared artifact creation and persistence in `src/airport_analytics/consent/service.py` and `src/airport_analytics/history/repository.py`; preserve authorized prior artifacts after withdrawal and omit analyst identity by default.
-- [ ] T050 [US4] Implement report-history UI, consent notice, consent controls, and ownership-scoped report detail access in `app.py`; disclose retention of previously reused content before opt-in and keep this consent separate from hosted-provider data-use disclosure.
+- [X] T046 [US4] Implement private report and shared-reuse artifact repositories in `src/airport_analytics/history/repository.py`; enforce analyst ownership at every repository operation and retain only ten private reports per analyst.
+- [X] T047 [US4] Implement append-only consent-event persistence in `src/airport_analytics/consent/repository.py`; record analyst/session, purpose, action, timestamp, and notice version.
+- [X] T048 [US4] Implement session-scoped reuse consent state transitions in `src/airport_analytics/consent/service.py`; start disabled, permit later opt-in/withdrawal/re-enable, and reuse only content created during active consent.
+- [X] T049 [US4] Implement shared artifact creation and persistence in `src/airport_analytics/consent/service.py` and `src/airport_analytics/history/repository.py`; preserve authorized prior artifacts after withdrawal and omit analyst identity by default.
+- [X] T050 [US4] Implement report-history UI, consent notice, consent controls, and ownership-scoped report detail access in `app.py`; disclose retention of previously reused content before opt-in and keep this consent separate from hosted-provider data-use disclosure.
 
 ## Phase 7: User Story 5 - Handle Unsupported or Unclear Questions (Priority: P3)
 
@@ -128,21 +128,21 @@ and measurable correctness, privacy, budget, and isolation criteria.
 
 ### Tests for User Story 5
 
-- [ ] T051 [P] [US5] Add clarification and unsupported-question integration tests for ambiguous metrics, missing fields, unavailable data, and empty supported result sets in `tests/integration/test_question_boundaries.py`.
-- [ ] T052 [P] [US5] Add provider-error and budget-exhaustion tests verifying no invalid plan is executed, no over-budget call occurs, and provider changes require explicit action in `tests/integration/test_model_failure_modes.py`.
+- [X] T051 [P] [US5] Add clarification and unsupported-question integration tests for ambiguous metrics, missing fields, unavailable data, and empty supported result sets in `tests/integration/test_question_boundaries.py`.
+- [X] T052 [P] [US5] Add provider-error and budget-exhaustion tests verifying no invalid plan is executed, no over-budget call occurs, and provider changes require explicit action in `tests/integration/test_model_failure_modes.py`.
 
 ### Implementation for User Story 5
 
-- [ ] T053 [US5] Implement model-plan outcome handling for `needs_clarification` and `unsupported` in `src/airport_analytics/reports/generation.py`; return one focused clarification or data limitation without compiling or executing a query.
-- [ ] T054 [US5] Implement distinct empty-result, unavailable-data, provider-error, and exhausted-budget states in `src/airport_analytics/errors.py` and `app.py`; do not show stale reports or fabricate zero-valued results.
+- [X] T053 [US5] Implement model-plan outcome handling for `needs_clarification` and `unsupported` in `src/airport_analytics/reports/generation.py`; return one focused clarification or data limitation without compiling or executing a query.
+- [X] T054 [US5] Implement distinct empty-result, unavailable-data, provider-error, and exhausted-budget states in `src/airport_analytics/errors.py` and `app.py`; do not show stale reports or fabricate zero-valued results.
 
 ## Phase 8: Polish and Cross-Cutting Concerns
 
 **Purpose**: Validate the integrated product, deployment guidance, and privacy/cost boundaries.
 
-- [ ] T055 [P] Update `README.md` and `.env.example` with setup, local/hosted provider configuration, disclosure behavior, secret handling, LangSmith opt-in, shared monthly budget settings, English-only MVP scope, accessibility baseline, and the absence of availability/concurrency-throughput SLAs.
-- [ ] T056 [P] Add deployment-wide budget concurrency and restart-persistence integration tests in `tests/integration/test_budget_concurrency.py` and `tests/integration/test_restart_persistence.py`; verify the shared reservation ledger and committed reports/consent events survive a normal process restart.
-- [ ] T057 [P] Add a privacy test for LangSmith tracing opt-in in `tests/integration/test_tracing_privacy.py`; verify default-off behavior and that no traces contain prompts/results unless explicit disclosure and configuration are enabled.
+- [X] T055 [P] Update `README.md` and `.env.example` with setup, local/hosted provider configuration, disclosure behavior, secret handling, LangSmith opt-in, shared monthly budget settings, English-only MVP scope, accessibility baseline, and the absence of availability/concurrency-throughput SLAs.
+- [X] T056 [P] Add deployment-wide budget concurrency and restart-persistence integration tests in `tests/integration/test_budget_concurrency.py` and `tests/integration/test_restart_persistence.py`; verify the shared reservation ledger and committed reports/consent events survive a normal process restart.
+- [X] T057 [P] Add a privacy test for LangSmith tracing opt-in in `tests/integration/test_tracing_privacy.py`; verify default-off behavior and that no traces contain prompts/results unless explicit disclosure and configuration are enabled.
 - [ ] T058 Compare candidate local and hosted model/provider configurations for structured-plan support, free-tier quotas, current data-use/retention terms, rates, fees/taxes/FX, and performance; evaluate against `tests/fixtures/golden_questions.json` and `tests/fixtures/golden_expected_results.json`, require at least 11/12 expected metric-and-scope interpretations and exact independent numeric results for every generated report, then document selection/rationale in `specs/001-airport-analytics-platform/research.md` and `specs/001-airport-analytics-platform/quickstart.md` without recording secrets.
 - [ ] T059 Benchmark end-to-end report latency for representative supported questions against the selected host and provider in `tests/performance/test_report_latency.py`; record the benchmark method and measured baseline in `specs/001-airport-analytics-platform/quickstart.md` without imposing a hard MVP pass/fail threshold.
 - [ ] T060 Before production enables shared reuse, obtain deployment-owner approval for retention periods and deletion procedures covering analyst identity mappings, private reports, consent events, shared artifacts, and backups; document the approved policy in `docs/privacy-data-retention.md` and keep production reuse disabled until approval is recorded.
