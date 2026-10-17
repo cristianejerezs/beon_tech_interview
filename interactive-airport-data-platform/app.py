@@ -38,7 +38,11 @@ LOGGER = logging.getLogger(__name__)
 NO_REPORT = "(No report selected)"
 TRACING_ACK_KEY = "airport_langsmith_disclosure_acknowledged"
 DEV_SIGN_IN_KEY = "airport_development_signed_in"
-PROVIDER_LABELS = {"ollama": "Ollama (local)", "openai": "OpenAI (hosted)"}
+PROVIDER_LABELS = {
+    "ollama": "Ollama (local)",
+    "openai": "OpenAI (hosted)",
+    "groq": "Groq (hosted, verified free plan)",
+}
 PURPOSE_LABELS: dict[ConsentPurpose, str] = {
     "faq": "FAQ examples",
     "system_improvement": "System improvement",
@@ -75,9 +79,9 @@ def _client_settings(settings: Settings, provider: str) -> Settings:
         return replace(settings, model_provider="ollama", model_name=local_model)
     hosted_model = os.getenv(
         "AIRPORT_OPENAI_MODEL_NAME",
-        settings.model_name if settings.model_provider == "openai" else "",
+        settings.model_name if settings.model_provider in {"openai", "groq"} else "",
     ).strip()
-    return replace(settings, model_provider="openai", model_name=hosted_model)
+    return replace(settings, model_provider=provider, model_name=hosted_model)
 
 
 def _report_label(report_id: str, labels: dict[str, str]) -> str:
@@ -150,10 +154,15 @@ def _provider_controls(settings: Settings, budget: BudgetLedger) -> str:
     choices = ["ollama"]
     hosted_model = os.getenv(
         "AIRPORT_OPENAI_MODEL_NAME",
-        settings.model_name if settings.model_provider == "openai" else "",
+        settings.model_name if settings.model_provider in {"openai", "groq"} else "",
     ).strip()
     if settings.openai_api_key and hosted_model:
-        choices.append("openai")
+        choices.append(
+            "groq"
+            if settings.openai_base_url == "https://api.groq.com/openai/v1"
+            or settings.model_provider == "groq"
+            else "openai"
+        )
     elif settings.development_sign_in:
         st.sidebar.caption(
             "Remote models are available after configuring AIRPORT_OPENAI_API_KEY and "
@@ -176,17 +185,17 @@ def _provider_controls(settings: Settings, budget: BudgetLedger) -> str:
         ),
     )
     st.sidebar.metric("Hosted budget remaining this UTC month", f"${budget.remaining_usd():.2f}")
-    if selected == "openai":
+    if selected != "ollama":
         provider_settings = _client_settings(settings, selected)
         provider = ProviderDescriptor(
-            provider_id="openai",
+            provider_id=selected,
             model_id=provider_settings.model_name,
             product_improvement_terms=settings.hosted_product_improvement_terms,
             hosted=True,
         )
         st.sidebar.warning(
             f"Hosted request notice: your question and the minimal plan schema/catalog "
-            f"will be sent to the configured OpenAI-compatible service "
+            f"will be sent to {PROVIDER_LABELS[selected]} at the configured service "
             f"({provider.model_id}) at "
             f"{settings.openai_base_url or 'https://api.openai.com/v1'}. "
             f"No source rows, database "
@@ -404,7 +413,7 @@ def main() -> None:
         generator = ReportGenerator(client, executor)
 
         st.header("Ask an airport-data question")
-        if selected_provider == "openai":
+        if selected_provider != "ollama":
             current_provider = client.provider
             provider_acknowledged = has_disclosed(st.session_state, current_provider)
             if not provider_acknowledged:

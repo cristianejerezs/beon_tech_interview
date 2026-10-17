@@ -76,8 +76,8 @@ class Settings:
             load_dotenv(dotenv_path=env_file, override=False)
 
         provider = os.getenv("AIRPORT_MODEL_PROVIDER", "ollama").strip().lower()
-        if provider not in {"ollama", "openai"}:
-            raise ValueError("AIRPORT_MODEL_PROVIDER must be 'ollama' or 'openai'.")
+        if provider not in {"ollama", "openai", "groq"}:
+            raise ValueError("AIRPORT_MODEL_PROVIDER must be 'ollama', 'openai', or 'groq'.")
 
         free_plan = os.getenv("AIRPORT_HOSTED_FREE_PLAN", "false").strip().lower()
         if free_plan not in {"true", "false"}:
@@ -85,8 +85,10 @@ class Settings:
         hosted_free_plan = free_plan == "true"
 
         api_key = os.getenv("AIRPORT_OPENAI_API_KEY") or None
-        if provider == "openai" and not api_key:
-            raise ValueError("AIRPORT_OPENAI_API_KEY is required for the openai provider.")
+        if provider in {"openai", "groq"} and not api_key:
+            raise ValueError("AIRPORT_OPENAI_API_KEY is required for the hosted provider.")
+        if provider == "groq" and not hosted_free_plan:
+            raise ValueError("Groq currently requires a verified AIRPORT_HOSTED_FREE_PLAN=true.")
 
         budget = _decimal_env("AIRPORT_DEPLOYMENT_MONTHLY_BUDGET_USD", "10.00")
         if budget is None or budget > Decimal("10.00"):
@@ -126,7 +128,8 @@ class Settings:
             ).strip(),
             ollama_base_url=os.getenv("AIRPORT_OLLAMA_BASE_URL", "http://localhost:11434").strip(),
             openai_api_key=api_key,
-            openai_base_url=os.getenv("AIRPORT_OPENAI_BASE_URL") or None,
+            openai_base_url=os.getenv("AIRPORT_OPENAI_BASE_URL")
+            or ("https://api.groq.com/openai/v1" if provider == "groq" else None),
             hosted_input_usd_per_million=input_rate,
             hosted_output_usd_per_million=output_rate,
             hosted_free_plan=hosted_free_plan,

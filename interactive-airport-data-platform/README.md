@@ -3,6 +3,8 @@
 Question-driven, evidence-grounded analytics for the supplied historical NYC-area airport data.
 
 For first-time setup and product usage, follow the [quickstart guide](QUICKSTART.md).
+For free remote inference, see [Groq setup](QUICKSTART.md#groq-free-plan-setup).
+Groq compatibility is mock-tested; a live provider evaluation remains pending.
 
 ## Status
 

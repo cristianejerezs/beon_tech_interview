@@ -10,6 +10,21 @@ def test_unknown_provider_is_rejected(monkeypatch) -> None:
         Settings.from_env(load_file=False)
 
 
+def test_groq_requires_free_plan_confirmation_and_defaults_to_official_endpoint(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("AIRPORT_MODEL_PROVIDER", "groq")
+    monkeypatch.setenv("AIRPORT_MODEL_NAME", "openai/gpt-oss-20b")
+    monkeypatch.setenv("AIRPORT_OPENAI_API_KEY", "test-only")
+    monkeypatch.setenv("AIRPORT_HOSTED_FREE_PLAN", "false")
+    monkeypatch.delenv("AIRPORT_OPENAI_BASE_URL", raising=False)
+    with pytest.raises(ValueError, match="verified"):
+        Settings.from_env(load_file=False)
+    monkeypatch.setenv("AIRPORT_HOSTED_FREE_PLAN", "true")
+    settings = Settings.from_env(load_file=False)
+    assert settings.openai_base_url == "https://api.groq.com/openai/v1"
+
+
 def test_development_sign_in_defaults_off_and_rejects_production(monkeypatch) -> None:
     monkeypatch.setenv("AIRPORT_PRODUCTION", "false")
     monkeypatch.delenv("AIRPORT_DEV_SIGN_IN_ENABLED", raising=False)

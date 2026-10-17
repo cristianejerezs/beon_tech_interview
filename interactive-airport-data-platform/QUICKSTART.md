@@ -240,6 +240,62 @@ does not delete a separately retained, previously authorized shared artifact.
 
 ## Optional hosted processing and sharing
 
+### Groq free-plan setup
+
+Groq is supported explicitly for `openai/gpt-oss-20b` and `openai/gpt-oss-120b`
+on the official endpoint. Support uses the GPT-OSS Harmony tokenizer with a conservative
+framing allowance rather than pretending that these models are OpenAI chat model names.
+Provider-reported usage settles the ledger; application validation still rejects unsafe plans.
+This compatibility path is tested with mock responses, not a completed live-model acceptance study.
+
+1. Create a Groq account at <https://console.groq.com> and review your plan/billing settings.
+   Confirm your requests are free and cannot trigger paid overage. Do not upgrade to a paid
+   plan for this configuration: this Groq integration currently supports verified free use only.
+2. Check your actual limits at <https://console.groq.com/settings/limits>.
+   Limits can include requests/tokens per minute and per day, not just monthly usage.
+   Provider `429` responses still apply; the app does not automatically retry.
+3. Review <https://console.groq.com/docs/your-data> and your organization's Data Controls.
+   The documentation describes no default inference-content retention, with reliability/abuse
+   exceptions (up to 30 days, subject to legal requirements) and Zero Data Retention controls.
+   Verify current product-improvement terms separately and accurately disclose your settings.
+4. Generate a key at <https://console.groq.com/keys>. Put it only in your local `.env`,
+   not in chat or a committed file.
+5. Configure the following, replacing placeholders locally:
+
+```dotenv
+AIRPORT_MODEL_PROVIDER=ollama
+AIRPORT_MODEL_NAME=llama3.1:8b
+AIRPORT_OLLAMA_MODEL_NAME=llama3.1:8b
+AIRPORT_OPENAI_API_KEY=YOUR_GROQ_KEY
+AIRPORT_OPENAI_BASE_URL=https://api.groq.com/openai/v1
+AIRPORT_OPENAI_MODEL_NAME=openai/gpt-oss-20b
+AIRPORT_HOSTED_FREE_PLAN=true
+AIRPORT_HOSTED_MAX_INPUT_TOKENS=16000
+AIRPORT_HOSTED_MAX_OUTPUT_TOKENS=4096
+AIRPORT_HOSTED_FREE_MONTHLY_REQUEST_LIMIT=100
+AIRPORT_HOSTED_FREE_MONTHLY_TOKEN_LIMIT=1000000
+AIRPORT_HOSTED_PRODUCT_IMPROVEMENT_TERMS=REPLACE_WITH_REVIEWED_TERMS_AND_DATA_CONTROL_SETTINGS
+LANGSMITH_TRACING=false
+```
+
+Only set `AIRPORT_HOSTED_FREE_PLAN=true` after step 1. The quota values above are
+conservative application allowances, not verified Groq entitlements; lower them if needed.
+No dollar rates are required for confirmed free inference. Tracing, if enabled separately,
+still needs a bounded charge and shares the USD 10 budget.
+
+Restart the app, explicitly select **Groq (hosted, verified free plan)**, and acknowledge
+the provider/model/endpoint/data-use notice. The reused `AIRPORT_OPENAI_*` variable names
+refer to the OpenAI-compatible protocol; the key must be from Groq, not OpenAI.
+To default directly to Groq, set `AIRPORT_MODEL_PROVIDER=groq` and
+`AIRPORT_MODEL_NAME=openai/gpt-oss-20b`.
+
+Official references: [API compatibility](https://console.groq.com/docs/openai),
+[structured outputs](https://console.groq.com/docs/structured-outputs),
+[limits](https://console.groq.com/docs/rate-limits), and
+[data controls](https://console.groq.com/docs/your-data).
+
+### Other hosted processing
+
 Hosted inference is not needed for the local path above. To enable it, an operator must
 configure the OpenAI-compatible credentials, model, current rates or verified free-plan
 quotas, fee/FX bounds, and data-use terms in the process environment or local `.env`,

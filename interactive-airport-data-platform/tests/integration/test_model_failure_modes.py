@@ -1,3 +1,5 @@
+from dataclasses import replace
+from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -9,6 +11,7 @@ from airport_analytics.analytics.provider_policy import mark_disclosed
 from airport_analytics.config import Settings
 from airport_analytics.errors import (
     BudgetExceededError,
+    CostUnboundedError,
     DisclosureRequiredError,
     ProviderError,
 )
@@ -113,3 +116,62 @@ def test_uncertain_provider_failure_is_not_retried_or_released(tmp_path: Path, m
         row = connection.execute("SELECT status, failure_reason FROM usage_reservations").fetchone()
     assert row["status"] == "reserved"
     assert "acceptance is unknown" in row["failure_reason"]
+
+
+def _groq_settings(monkeypatch) -> Settings:
+    return replace(
+        _hosted_settings(monkeypatch),
+        model_provider="groq",
+        model_name="openai/gpt-oss-20b",
+        openai_base_url="https://api.groq.com/openai/v1",
+        hosted_free_plan=True,
+        max_input_tokens=16000,
+        max_output_tokens=4096,
+    )
+
+
+def test_groq_free_call_uses_harmony_validation_and_persistent_quota(tmp_path, monkeypatch) -> None:
+    settings = _groq_settings(monkeypatch)
+    model = FakeStructuredModel()
+    # The OpenAI chat name/tokenizer path must not be used for GPT-OSS.
+    model.get_num_tokens_from_messages = lambda _: pytest.fail("OpenAI tokenizer was used")
+    client, budget, storage = _client(tmp_path, settings, model)
+    state = {}
+    with pytest.raises(DisclosureRequiredError):
+        client.generate_plan("How many flights?", session_state=state)
+    mark_disclosed(state, client.provider)
+    outcome = client.generate_plan("How many flights?", session_state=state)
+    assert outcome.plan.status == "unsupported"
+    assert model.calls == 1
+    assert budget.remaining_usd() == Decimal("1.00")
+    with storage.read() as connection:
+        row = connection.execute(
+            "SELECT free_plan, reserved_tokens, status FROM usage_reservations"
+        ).fetchone()
+    assert row["free_plan"] == 1
+    assert row["reserved_tokens"] == 20096
+    assert row["status"] == "settled"
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"hosted_free_plan": False},
+        {"openai_base_url": "https://another.example/v1"},
+        {"model_name": "unverified-model"},
+    ],
+)
+def test_groq_rejects_unsupported_configuration(tmp_path, monkeypatch, changes) -> None:
+    with pytest.raises((ValueError, CostUnboundedError)):
+        _client(tmp_path, replace(_groq_settings(monkeypatch), **changes), FakeStructuredModel())
+
+
+def test_groq_input_limit_blocks_dispatch(tmp_path, monkeypatch) -> None:
+    settings = replace(_groq_settings(monkeypatch), max_input_tokens=1)
+    model = FakeStructuredModel()
+    client, _, _ = _client(tmp_path, settings, model)
+    state = {}
+    mark_disclosed(state, client.provider)
+    with pytest.raises(CostUnboundedError):
+        client.generate_plan("How many flights?", session_state=state)
+    assert model.calls == 0

@@ -78,6 +78,8 @@ def _build_chat_model(settings: Settings) -> BaseChatModel:
     }
     if settings.openai_base_url:
         options["base_url"] = settings.openai_base_url
+    if settings.model_provider == "groq":
+        options["reasoning_effort"] = "low"
     return ChatOpenAI(**options)
 
 
@@ -111,6 +113,15 @@ class LangChainPlanClient:
         model: BaseChatModel | None = None,
     ) -> None:
         settings.validate_model_selection()
+        if settings.model_provider == "groq":
+            if not settings.hosted_free_plan:
+                raise CostUnboundedError("Groq support requires a verified free plan.")
+            if settings.openai_base_url != "https://api.groq.com/openai/v1":
+                raise ValueError(
+                    "Groq requires the official https://api.groq.com/openai/v1 endpoint."
+                )
+            if settings.model_name not in {"openai/gpt-oss-20b", "openai/gpt-oss-120b"}:
+                raise ValueError("Groq support currently requires a GPT-OSS 20B or 120B model.")
         self.settings = settings
         self.budget = budget
         self.tracing = tracing or TracingConfig(enabled=False, maximum_charge_per_trace_usd=None)
@@ -168,8 +179,18 @@ class LangChainPlanClient:
         if not self.hosted:
             return 0
         try:
-            prompt_count = self.chat_model.get_num_tokens_from_messages(messages)
-            encoding = tiktoken.encoding_for_model(self.settings.model_name)
+            if self.settings.model_provider == "groq":
+                # GPT-OSS uses Harmony, not the OpenAI chat-model name lookup.
+                encoding = tiktoken.get_encoding("o200k_harmony")
+                prompt_count = sum(
+                    len(encoding.encode(str(message.content), disallowed_special=()))
+                    for message in messages
+                )
+                # Conservative framing allowance; actual usage is settled from the provider.
+                prompt_count += 1024
+            else:
+                prompt_count = self.chat_model.get_num_tokens_from_messages(messages)
+                encoding = tiktoken.encoding_for_model(self.settings.model_name)
             schema_count = len(encoding.encode(self._schema_json))
         except (KeyError, ValueError, NotImplementedError) as exc:
             raise CostUnboundedError(

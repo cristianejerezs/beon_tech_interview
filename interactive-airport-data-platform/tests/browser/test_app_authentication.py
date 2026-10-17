@@ -27,6 +27,7 @@ def _configure_development(monkeypatch, tmp_path, address: str) -> None:
     monkeypatch.setenv("AIRPORT_MODEL_PROVIDER", "ollama")
     monkeypatch.setenv("AIRPORT_DATABASE_PATH", str(tmp_path / "development.sqlite3"))
     monkeypatch.setenv("AIRPORT_SHARED_REUSE_ENABLED", "false")
+    monkeypatch.setenv("AIRPORT_HOSTED_PRODUCT_IMPROVEMENT_TERMS", "unknown")
     monkeypatch.setenv("LANGSMITH_TRACING", "false")
     original_get_option = product_app.st.get_option
     monkeypatch.setattr(
@@ -136,6 +137,36 @@ def test_configured_remote_model_available_with_disclosure_in_development(
     app.radio[0].set_value("openai").run()
     assert not app.error
     assert any("https://provider.example/v1" in notice.value for notice in app.warning)
+    assert next(button for button in app.button if button.label == "Generate report").disabled
+    next(
+        button
+        for button in app.button
+        if button.label == "I understand and acknowledge hosted processing"
+    ).click().run()
+    assert not next(button for button in app.button if button.label == "Generate report").disabled
+
+
+def test_groq_is_explicitly_selectable_in_development(monkeypatch, tmp_path) -> None:
+    from airport_analytics.analytics.provider_policy import ProviderDescriptor
+
+    _configure_development(monkeypatch, tmp_path, "127.0.0.1")
+    monkeypatch.setenv("AIRPORT_OPENAI_API_KEY", "test-only")
+    monkeypatch.setenv("AIRPORT_OPENAI_MODEL_NAME", "openai/gpt-oss-20b")
+    monkeypatch.setenv("AIRPORT_OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
+    monkeypatch.setenv("AIRPORT_HOSTED_FREE_PLAN", "true")
+    monkeypatch.setattr(product_app, "_executor", lambda *args: SimpleNamespace())
+    monkeypatch.setattr(
+        product_app,
+        "LangChainPlanClient",
+        lambda *args, **kwargs: SimpleNamespace(
+            provider=ProviderDescriptor("groq", "openai/gpt-oss-20b", "unknown")
+        ),
+    )
+    app = AppTest.from_function(_development_app).run()
+    app.button[0].click().run()
+    app.radio[0].set_value("groq").run()
+    assert not app.error
+    assert any("api.groq.com" in warning.value for warning in app.warning)
     assert next(button for button in app.button if button.label == "Generate report").disabled
     next(
         button
