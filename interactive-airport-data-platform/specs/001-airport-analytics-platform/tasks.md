@@ -14,7 +14,7 @@ and measurable correctness, privacy, budget, and isolation criteria.
 
 - [ ] T001 Create `pyproject.toml` for Python 3.12 with Streamlit, DuckDB, LangChain core and Ollama integration, Pydantic, Plotly, SQLite support, pytest, and Streamlit AppTest dependencies.
 - [ ] T002 [P] Create the application package, test directories, and package entry point in `src/airport_analytics/__init__.py`, `src/airport_analytics/`, `tests/unit/`, `tests/integration/`, `tests/browser/`, and `app.py`.
-- [ ] T003 [P] Add environment-variable configuration examples and secret-handling guidance in `.env.example` and `README.md`; do not include API keys, provider credentials, or real identity-provider secrets.
+- [ ] T003 [P] Add environment-variable configuration examples and secret-handling guidance in `.env.example` and `README.md`; do not include API keys, provider credentials, or real identity-provider secrets. At implementation start and after each implementation milestone, record authoritative Copilot/session token usage in `read_me.md`; never estimate or invent usage figures.
 - [ ] T004 Configure formatting, linting, and test discovery in `pyproject.toml`.
 
 ## Phase 2: Foundational
