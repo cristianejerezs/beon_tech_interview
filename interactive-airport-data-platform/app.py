@@ -213,6 +213,10 @@ def _provider_controls(settings: Settings, budget: BudgetLedger) -> str:
     return selected
 
 
+def _select_faq_question(question: str) -> None:
+    st.session_state["airport_question"] = question
+
+
 def _faq_panel(reports: ReportRepository) -> None:
     with st.expander("Shared FAQs"):
         st.caption(
@@ -231,8 +235,12 @@ def _faq_panel(reports: ReportRepository) -> None:
             st.json(artifact.content["definitions"])
             st.json(artifact.content["scope"])
             st.dataframe(artifact.content["summary_rows"], hide_index=True)
-            if st.button("Use this FAQ question", key=f"faq_{artifact.artifact_id}"):
-                st.session_state["airport_question"] = artifact.content["question"]
+            st.button(
+                "Use this FAQ question",
+                key=f"faq_{artifact.artifact_id}",
+                on_click=_select_faq_question,
+                args=(artifact.content["question"],),
+            )
 
 
 def _tracing_disclosure(tracing: TracingConfig) -> bool:
@@ -452,7 +460,7 @@ def main() -> None:
             )
         else:
             st.caption(f"Refinement target: {current_report.question}")
-        with st.form("question_form", clear_on_submit=True):
+        with st.form("question_form", clear_on_submit=False):
             question = st.text_area(
                 "Question",
                 key="airport_question",

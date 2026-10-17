@@ -107,6 +107,21 @@ def test_development_reuse_opt_in_shared_faq_and_question_selection(monkeypatch,
     assert any(report.narrative == text.value for text in app.markdown)
     next(button for button in app.button if button.label == "Use this FAQ question").click().run()
     assert app.text_area[0].value == report.question
+    generator = Mock()
+    generator.generate.return_value = SimpleNamespace(
+        status="needs_clarification", report=None, message="Which airport?"
+    )
+    monkeypatch.setattr(product_app, "ReportGenerator", lambda *args: generator)
+    next(button for button in app.button if button.label == "Generate report").click().run()
+    assert not app.error
+    assert generator.generate.call_args.args[0] == report.question
+    assert app.text_area[0].value == report.question
+    app.text_area[0].input("How many flights departed from JFK in 2013?")
+    next(button for button in app.button if button.label == "Generate report").click().run()
+    assert generator.generate.call_args.args[0] == "How many flights departed from JFK in 2013?"
+    next(button for button in app.button if button.label == "Use this FAQ question").click().run()
+    next(button for button in app.button if button.label == "Generate report").click().run()
+    assert generator.generate.call_args.args[0] == report.question
 
     next(
         toggle for toggle in app.toggle if toggle.label == "Enable FAQ examples reuse"

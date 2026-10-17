@@ -234,6 +234,8 @@ breakdowns, copyable examples, and tips for clarifying or refining a question.
    - "How many distinct destinations did EWR serve in 2013?"
    - "What were the three busiest destinations from LGA in 2013?"
    - "Which carrier had the highest mean departure delay in 2013?"
+   **Use this FAQ question** fills the same editable field. Questions remain in the field
+   after submission, including failures, so you can correct or resubmit them.
 4. Review the answer, metric definition, active filters, period, supporting rows,
    coverage, and limitations. A clarification or unsupported-data response is not a report.
 5. To refine a displayed report, check **Refine the currently displayed report's scope**,
