@@ -18,7 +18,11 @@ from airport_analytics.analytics.provider_policy import (
     has_disclosed,
     mark_disclosed,
 )
-from airport_analytics.auth import AnalystIdentity, resolve_analyst_identity
+from airport_analytics.auth import (
+    AnalystIdentity,
+    resolve_analyst_identity,
+    resolve_development_identity,
+)
 from airport_analytics.config import Settings
 from airport_analytics.consent.repository import ConsentPurpose, ConsentRepository
 from airport_analytics.consent.service import ConsentService
@@ -33,6 +37,7 @@ from airport_analytics.storage import Storage
 LOGGER = logging.getLogger(__name__)
 NO_REPORT = "(No report selected)"
 TRACING_ACK_KEY = "airport_langsmith_disclosure_acknowledged"
+DEV_SIGN_IN_KEY = "airport_development_signed_in"
 PROVIDER_LABELS = {"ollama": "Ollama (local)", "openai": "OpenAI (hosted)"}
 PURPOSE_LABELS: dict[ConsentPurpose, str] = {
     "faq": "FAQ examples",
@@ -278,7 +283,33 @@ def main() -> None:
     st.title("Interactive Airport Data Platform")
     try:
         settings = Settings.from_env()
-        identity = _identity()
+        if settings.development_sign_in:
+            server_address = st.get_option("server.address")
+            if settings.production or server_address not in {"localhost", "127.0.0.1", "::1"}:
+                st.error(
+                    "Development sign-in requires AIRPORT_PRODUCTION=false and "
+                    "--server.address=127.0.0.1. Stop the app and correct its configuration."
+                )
+                return
+            st.warning(
+                "Development sign-in is enabled. This is not real authentication. "
+                "All development sessions share one identity and its report history. "
+                "Use only on your trusted local machine; never expose or proxy this server."
+            )
+            identity = (
+                resolve_development_identity(
+                    production=settings.production, server_address=server_address
+                )
+                if st.session_state.get(DEV_SIGN_IN_KEY) is True
+                else None
+            )
+            if identity is None:
+                if st.button("Sign in as local developer"):
+                    st.session_state[DEV_SIGN_IN_KEY] = True
+                    st.rerun()
+                return
+        else:
+            identity = _identity()
         if identity is None:
             if getattr(st.user, "is_logged_in", False):
                 st.error("The OIDC identity did not contain stable issuer and subject claims.")
@@ -288,9 +319,17 @@ def main() -> None:
                 st.login()
             return
 
-        st.sidebar.caption("Signed in with a pseudonymous, issuer/subject-derived analyst key.")
+        st.sidebar.caption(
+            "Signed in as local developer (development bypass)."
+            if settings.development_sign_in
+            else "Signed in with a pseudonymous, issuer/subject-derived analyst key."
+        )
         if st.sidebar.button("Sign out"):
-            st.logout()
+            if settings.development_sign_in:
+                st.session_state.clear()
+                st.rerun()
+            else:
+                st.logout()
             return
         session_id = st.session_state.setdefault("airport_session_id", uuid.uuid4().hex)
         storage = _storage(str(settings.database_path))

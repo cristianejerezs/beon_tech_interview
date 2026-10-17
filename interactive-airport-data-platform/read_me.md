@@ -29,7 +29,9 @@ remain outstanding; the task breakdown and acceptance expectations are in
   Narratives, metric definitions, scope, counts, and limitations must agree with those results.
 - **Persistence and identity:** SQLite stores private reports, consent events, and hosted-usage
   reservations. OIDC identifies analysts by stable issuer/subject claims; every private resource
-  is ownership-checked.
+  is ownership-checked. Trusted local development can opt into a separate shared development
+  identity without OIDC; this bypass is disabled by default, requires explicit loopback server
+  binding, and is prohibited in production. See the [quickstart](./QUICKSTART.md).
 
 ## Product scope
 

@@ -28,3 +28,13 @@ def resolve_analyst_identity(issuer: str | None, subject: str | None) -> Analyst
 def require_owner(identity: AnalystIdentity, resource_owner_id: str) -> None:
     if identity.analyst_id != resource_owner_id:
         raise AuthorizationError()
+
+
+def resolve_development_identity(
+    *, production: bool, server_address: str | None
+) -> AnalystIdentity:
+    if production:
+        raise AuthorizationError("Development sign-in is prohibited in production.")
+    if server_address not in {"localhost", "127.0.0.1", "::1"}:
+        raise AuthorizationError("Development sign-in requires --server.address=127.0.0.1.")
+    return resolve_analyst_identity("urn:airport-analytics:development", "local-developer")

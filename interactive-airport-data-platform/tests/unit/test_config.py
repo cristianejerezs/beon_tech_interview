@@ -10,6 +10,20 @@ def test_unknown_provider_is_rejected(monkeypatch) -> None:
         Settings.from_env(load_file=False)
 
 
+def test_development_sign_in_defaults_off_and_rejects_production(monkeypatch) -> None:
+    monkeypatch.setenv("AIRPORT_PRODUCTION", "false")
+    monkeypatch.delenv("AIRPORT_DEV_SIGN_IN_ENABLED", raising=False)
+    assert not Settings.from_env(load_file=False).development_sign_in
+    monkeypatch.setenv("AIRPORT_DEV_SIGN_IN_ENABLED", "true")
+    assert Settings.from_env(load_file=False).development_sign_in
+    monkeypatch.setenv("AIRPORT_PRODUCTION", "true")
+    with pytest.raises(ValueError, match="Development sign-in is prohibited"):
+        Settings.from_env(load_file=False)
+    monkeypatch.setenv("AIRPORT_DEV_SIGN_IN_ENABLED", "invalid")
+    with pytest.raises(ValueError, match="AIRPORT_DEV_SIGN_IN_ENABLED"):
+        Settings.from_env(load_file=False)
+
+
 def test_hosted_provider_requires_credentials(monkeypatch) -> None:
     monkeypatch.setenv("AIRPORT_MODEL_PROVIDER", "openai")
     monkeypatch.delenv("AIRPORT_OPENAI_API_KEY", raising=False)

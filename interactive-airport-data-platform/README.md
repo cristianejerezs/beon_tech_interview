@@ -17,9 +17,12 @@ retention-policy approval, and analyst usability sessions remain release gates; 
   validates each plan against its JSON Schema and closed catalog, then compiles a parameterized,
   read-only DuckDB `SELECT`. A model receives no database access or source rows; model-generated
   SQL is never executed.
-- OIDC issuer and subject claims produce a pseudonymous analyst ID. Private reports, report detail,
+- Normal sign-in uses OIDC issuer and subject claims to produce a pseudonymous analyst ID. Private reports, report detail,
   deletion, history, and downloads are owner-scoped. Each analyst's ten newest private reports are
   retained.
+- An opt-in development sign-in bypass is available only with explicit loopback server binding
+  and production mode disabled. It uses one shared development identity, not real authentication.
+  Never expose that server through a proxy or tunnel. See the [quickstart](QUICKSTART.md#option-a-development-sign-in-local-machine-only).
 - Hosted inference requires an explicit provider/model disclosure and a pre-call budget
   reservation. There is no automatic provider fallback. Hosted inference and any enabled,
   metered LangSmith traces share a deployment-wide USD 10 cap per UTC month.

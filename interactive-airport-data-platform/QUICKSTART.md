@@ -3,9 +3,9 @@
 This guide covers the current single-host MVP on Windows with PowerShell.
 The recommended first run uses Ollama locally, with hosted inference and tracing off.
 
-**Before you start:** the app requires OIDC sign-in, even for local analytics.
-There is no anonymous mode or development sign-in bypass. You need an identity-provider
-application registration and a running model service; installing Python packages alone
+**Before you start:** normal use requires OIDC sign-in. For trusted local development,
+you can explicitly enable the localhost-only development sign-in described in step 3.
+Either route still requires a running model service; installing Python packages alone
 does not make the product ready to answer questions.
 
 ## 1. Open the project and prepare Python
@@ -95,7 +95,44 @@ Expected: `nyc_airlines.csv`, `nyc_airports.csv`, `nyc_flights_fixed.csv`,
 `nyc_planes.csv`, and `nyc_weather.csv`. The app validates the snapshot before analytics.
 Do not replace these with live or differently shaped CSVs.
 
-## 3. Configure sign-in
+## 3. Choose development sign-in or OIDC
+
+### Option A: development sign-in (local machine only)
+
+You can skip OIDC registration and the secrets file for local development. Set these in `.env`:
+
+```dotenv
+AIRPORT_DEV_SIGN_IN_ENABLED=true
+AIRPORT_PRODUCTION=false
+```
+
+Start the server with an explicit loopback bind:
+
+```powershell
+python -m streamlit run app.py --server.address=127.0.0.1
+```
+
+Without activation, use:
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address=127.0.0.1
+```
+
+Open `http://127.0.0.1:8501` and select **Sign in as local developer**. Continue with step 5.
+The app shows a warning because this is not real authentication: every development
+session uses the same stable identity and can access that identity's private history.
+Its identity is separate from normal OIDC analysts. **Sign out** clears the development
+session and its disclosure/consent state, but does not delete saved reports.
+
+The bypass is off by default and is rejected in production or without an explicit
+`localhost`, `127.0.0.1`, or `::1` server bind. Never expose it through a reverse proxy,
+tunnel, shared host, or public network. For production, set
+`AIRPORT_DEV_SIGN_IN_ENABLED=false` and `AIRPORT_PRODUCTION=true`.
+Hosted-provider disclosures, budgets, query validation, and reuse controls still apply.
+
+### Option B: normal OIDC sign-in
+
+Keep `AIRPORT_DEV_SIGN_IN_ENABLED=false` and follow the configuration below.
 
 Ask your identity-provider administrator to register an OIDC web application with this
 local redirect URL:
@@ -199,6 +236,7 @@ are documented; do not enable approval flags merely to bypass this gate.
 |---|---|
 | Missing module or wrong Python | Activate `.venv` or use its interpreter explicitly, then install dependencies as above. |
 | Sign-in fails | Check Authlib installation, `[auth]`, issuer/subject claims, and exact redirect URL registration. |
+| Development sign-in is blocked | Set `AIRPORT_PRODUCTION=false` and launch with `--server.address=127.0.0.1`. Do not expose the development server externally. |
 | Model unavailable | Check Ollama is running, `/api/tags` lists the configured model, and the endpoint is correct. There is no automatic fallback. |
 | Dataset unavailable | Check the working directory, source-data setting, and all five original CSVs. |
 | Hosted submit disabled | Acknowledge provider processing and, if enabled, tracing notices. |

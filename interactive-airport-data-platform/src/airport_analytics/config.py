@@ -68,6 +68,7 @@ class Settings:
     shared_reuse_enabled: bool
     production: bool
     retention_policy_approved: bool
+    development_sign_in: bool = False
 
     @classmethod
     def from_env(cls, *, env_file: str | Path | None = ".env", load_file: bool = True) -> Settings:
@@ -108,6 +109,11 @@ class Settings:
                     "A maximum fixed fee/tax bound is required before paid hosted use."
                 )
 
+        production = _bool_env("AIRPORT_PRODUCTION")
+        development_sign_in = _bool_env("AIRPORT_DEV_SIGN_IN_ENABLED")
+        if production and development_sign_in:
+            raise ValueError("Development sign-in is prohibited when AIRPORT_PRODUCTION=true.")
+
         return cls(
             model_provider=provider,
             model_name=os.getenv(
@@ -139,8 +145,9 @@ class Settings:
             query_timeout_seconds=_int_env("AIRPORT_QUERY_TIMEOUT_SECONDS", 30),
             model_timeout_seconds=_int_env("AIRPORT_MODEL_TIMEOUT_SECONDS", 60),
             shared_reuse_enabled=_bool_env("AIRPORT_SHARED_REUSE_ENABLED"),
-            production=_bool_env("AIRPORT_PRODUCTION"),
+            production=production,
             retention_policy_approved=_bool_env("AIRPORT_RETENTION_POLICY_APPROVED"),
+            development_sign_in=development_sign_in,
         )
 
     def validate_model_selection(self) -> None:
