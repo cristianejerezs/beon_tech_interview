@@ -98,10 +98,10 @@ approved by the deployment owner.
 ## Implementation token-usage record
 
 Implementation has started. The current environment does not provide an authoritative Copilot or
-session token-usage report, so token counts are not available yet. Record only usage figures
-available from the Copilot/session usage report or another authoritative meter; do not estimate or
-invent token counts. Update this record at implementation milestones when authoritative figures
-are available.
+session token-usage report. An account-level Copilot usage export is now available, but it reports
+AI credits rather than tokens and contains no repository/workflow attribution. Its credit quantity
+is recorded below as account-level context only; input/output token counts remain unavailable and
+are not estimated.
 
 Keep this record distinct from the application's hosted-model usage ledger: runtime inference
 usage and cost are tracked by the application against the monthly USD 10 cap, while this section
@@ -109,4 +109,4 @@ records tokens used to build the solution.
 
 | Date / work period | Implementation phase or task IDs | Usage source / model | Input tokens | Cached input tokens | Output tokens | Total tokens | Notes |
 |---|---|---|---:|---:|---:|---:|---|
-| 2026-10-17 | Setup and implementation through UI/history/consent integration (T001–T050) | Authoritative usage report unavailable | — | — | — | — | Implementation milestone recorded; counts withheld rather than estimated. Update when an authoritative usage report becomes accessible. |
+| 2026-10-17 | Account-level Copilot usage export; not attributable to this repository | Copilot AI credits (not token counts) | — | — | — | — | 167.0928263 credits; gross USD 1.670928157, fully discounted (net USD 0). Repository and workflow fields are blank in the export. Token usage for this implementation remains unavailable. |
