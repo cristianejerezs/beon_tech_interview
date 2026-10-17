@@ -332,6 +332,8 @@ are documented; do not enable approval flags merely to bypass this gate.
 | Hosted submit disabled | Acknowledge provider processing and, if enabled, tracing notices. |
 | Hosted input/cost bound rejected | The operator must review token ceilings, tokenizer support, current rates, and fee bounds. Do not disable validation. |
 | No records or unsupported question | Broaden filters or ask about supported connectivity, delays, airlines, or aircraft metrics. |
+| Browser shows `Unknown request URL: GET /openai/v1` | This is an API base URL, not a web page. Leave the configured base URL unchanged; use the app to send chat-completions requests. |
+| Question says "the airport" without naming one | Specify EWR, JFK, or LGA, or provide an active report with that airport filter. The model should request clarification rather than guess. |
 
 The snapshot is historical, not live flight data. Weather comparisons are contextual, not
 causal. Live provider/model evaluation, latency baselining, owner retention approval, five

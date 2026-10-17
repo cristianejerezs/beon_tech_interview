@@ -184,6 +184,34 @@ def test_groq_input_limit_blocks_dispatch(tmp_path, monkeypatch) -> None:
     assert model.calls == 0
 
 
+def test_prompt_requires_airport_clarification_and_declares_metric_groupings(
+    tmp_path, monkeypatch
+) -> None:
+    from airport_analytics.data.catalog import METRICS
+
+    client, _, _ = _client(tmp_path, _groq_settings(monkeypatch), FakeStructuredModel())
+    prompt = client._messages(
+        "Determine the number of distinct destinations connected to the airport.", None
+    )[0].content
+    assert "ask which airport" in prompt
+    catalog = json.loads(client._catalog_json)
+    destination_metric = next(
+        metric for metric in catalog["metrics"] if metric["id"] == "distinct_destination_count"
+    )
+    assert destination_metric["allowed_group_by"] == sorted(
+        METRICS["distinct_destination_count"].allowed_dimensions
+    )
+
+
+def test_plan_rejection_guidance_is_safe_and_does_not_echo_arbitrary_details() -> None:
+    from airport_analytics.errors import InvalidPlanError
+
+    error = InvalidPlanError("The selected metric cannot be grouped by that dimension.")
+    assert "unsupported metric/grouping" in user_safe_message(error)
+    assert "No query was executed" in user_safe_message(error)
+    assert "private-question" not in user_safe_message(InvalidPlanError("private-question"))
+
+
 def test_groq_wire_schema_uses_supported_subset_but_local_validation_remains(
     tmp_path, monkeypatch
 ) -> None:

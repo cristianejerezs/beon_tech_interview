@@ -137,6 +137,11 @@ def _catalog_context() -> str:
             "description": item.description,
             "unit": item.unit,
             "population": item.population,
+            "allowed_group_by": sorted(
+                item.allowed_dimensions
+                if item.allowed_dimensions is not None
+                else DIMENSIONS.keys()
+            ),
         }
         for item in METRICS.values()
     ]
@@ -213,7 +218,18 @@ class LangChainPlanClient:
             "Return one JSON analysis plan conforming exactly to the supplied JSON Schema. "
             "Never return or execute SQL. Use only the supplied catalog IDs. If the request is "
             "ambiguous, return needs_clarification with one concise question. If unavailable, "
-            "return unsupported. No source rows, private history, credentials, or analyst "
+            "return unsupported. The historical flight snapshot covers NYC-area origins "
+            "EWR, JFK, and LGA in 2013. If a question refers to 'the airport' without naming "
+            "one, and active follow-up context does not identify one, ask which airport; "
+            "do not guess or substitute all airports. For needs_clarification or unsupported, "
+            "set intent, metric_id, time_range, sort, and chart_intent to null, "
+            "group_by and filters to empty arrays, and row_limit to 10. "
+            "For ready plans, group_by must be a subset of the chosen metric's allowed_group_by. "
+            "Use filters to restrict an airport, not group_by unless a breakdown is requested. "
+            "For an overall aggregate use group_by=[] and chart_intent='table'. "
+            "An unspecified time range must be null, never an object with two null dates. "
+            "Sort only by the selected metric ID or an active group_by ID, never 'metric_value'. "
+            "No source rows, private history, credentials, or analyst "
             "identifiers are available. Catalog: "
             + self._catalog_json
             + " Schema: "

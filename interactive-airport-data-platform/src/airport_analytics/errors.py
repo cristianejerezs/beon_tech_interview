@@ -21,6 +21,38 @@ class InvalidPlanError(PlatformError):
     code = "invalid_plan"
     user_message = "The question could not be safely interpreted. Please rephrase it."
 
+    def __init__(self, message: str | None = None) -> None:
+        safe_reasons = {
+            "The selected metric cannot be grouped by that dimension.": (
+                "The model selected an unsupported metric/grouping combination."
+            ),
+            "A time range must include a start or end date.": (
+                "The model returned an empty date range."
+            ),
+            "The plan selected a metric outside the approved catalog.": (
+                "The model selected an unsupported metric."
+            ),
+            "The plan selected a dimension outside the approved catalog.": (
+                "The model selected an unsupported grouping."
+            ),
+            "The plan selected a filter outside the approved catalog.": (
+                "The model selected an unsupported filter."
+            ),
+            "The model response does not match the approved plan schema.": (
+                "The model response did not match the required analysis-plan format."
+            ),
+            "The provider did not return a valid structured plan.": (
+                "The model did not return a complete structured analysis plan."
+            ),
+        }
+        if message in safe_reasons:
+            self.user_message = (
+                safe_reasons[message]
+                + " No query was executed. Specify the airport (EWR, JFK, or LGA), "
+                "metric, and period, or ask the model to clarify."
+            )
+        super().__init__(message)
+
 
 class UnsupportedAnalysisError(PlatformError):
     code = "unsupported_analysis"
