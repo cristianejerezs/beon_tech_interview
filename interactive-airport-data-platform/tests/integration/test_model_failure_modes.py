@@ -212,6 +212,28 @@ def test_plan_rejection_guidance_is_safe_and_does_not_echo_arbitrary_details() -
     assert "private-question" not in user_safe_message(InvalidPlanError("private-question"))
 
 
+@pytest.mark.parametrize(
+    ("time_range", "valid"),
+    [
+        (None, True),
+        ({"start": "2013-01-01", "end": "2013-12-31"}, True),
+        ({"start": "2013-01-01", "end": None}, True),
+        ({"start": None, "end": "2013-12-31"}, True),
+        ({"start": None, "end": None}, False),
+        ({}, False),
+        ({"start": "2013-01-01"}, False),
+    ],
+)
+def test_groq_wire_schema_prevents_empty_date_ranges(
+    tmp_path, monkeypatch, time_range, valid
+) -> None:
+    from jsonschema import Draft202012Validator
+
+    client, _, _ = _client(tmp_path, _groq_settings(monkeypatch), FakeStructuredModel())
+    schema = client.chat_model.output_schema["properties"]["time_range"]
+    assert Draft202012Validator(schema).is_valid(time_range) is valid
+
+
 def test_groq_wire_schema_uses_supported_subset_but_local_validation_remains(
     tmp_path, monkeypatch
 ) -> None:

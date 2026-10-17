@@ -29,6 +29,37 @@ def test_valid_plan_matches_schema_and_catalog() -> None:
 
 
 @pytest.mark.parametrize(
+    "time_range",
+    [
+        None,
+        {"start": "2013-01-01", "end": "2013-12-31"},
+        {"start": "2013-01-01", "end": None},
+        {"start": None, "end": "2013-12-31"},
+    ],
+)
+def test_valid_date_range_shapes(time_range) -> None:
+    payload = ready_plan()
+    payload["time_range"] = time_range
+    assert validate_analysis_plan(payload).status == "ready"
+
+
+@pytest.mark.parametrize(
+    "time_range",
+    [
+        {"start": None, "end": None},
+        {},
+        {"start": "2013-01-01"},
+        {"start": "2013-02-30", "end": None},
+    ],
+)
+def test_invalid_date_ranges_remain_rejected(time_range) -> None:
+    payload = ready_plan()
+    payload["time_range"] = time_range
+    with pytest.raises(InvalidPlanError):
+        validate_analysis_plan(payload)
+
+
+@pytest.mark.parametrize(
     ("change", "value"),
     [
         ("metric_id", "arbitrary_sql"),

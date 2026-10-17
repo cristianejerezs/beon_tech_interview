@@ -133,6 +133,10 @@ answer, such as "Count distinct destinations from JFK in 2013", rather than only
 - A plan-format or unsupported-grouping error means the model response was rejected
   before query execution. Simplify the request and use a compatible metric/breakdown.
   This is not necessarily an authentication failure.
+- An empty date-range error is a model-output defect, not a problem with a question
+  that already supplies a year. Date ranges must contain at least one date, or be
+  `null` when unused. The structured-output schema disallows two null endpoints.
+  As a diagnostic, spell out "from 2013-01-01 through 2013-12-31".
 - Provider authentication, connection, rate-limit, and budget errors cannot be fixed
   by better question wording. See [quickstart troubleshooting](QUICKSTART.md).
 - No matching records does not prove there were no real-world flights; check the

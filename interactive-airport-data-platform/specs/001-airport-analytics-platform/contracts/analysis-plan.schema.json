@@ -76,13 +76,28 @@
       "maxItems": 12
     },
     "time_range": {
-      "type": ["object", "null"],
-      "additionalProperties": false,
-      "required": ["start", "end"],
-      "properties": {
-        "start": { "type": ["string", "null"], "format": "date" },
-        "end": { "type": ["string", "null"], "format": "date" }
-      }
+      "description": "Null when no explicit date range is used. Otherwise at least one endpoint must be a date.",
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "type": "string", "format": "date" },
+            "end": { "type": ["string", "null"], "format": "date" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "type": "null" },
+            "end": { "type": "string", "format": "date" }
+          }
+        }
+      ]
     },
     "sort": {
       "type": ["object", "null"],
