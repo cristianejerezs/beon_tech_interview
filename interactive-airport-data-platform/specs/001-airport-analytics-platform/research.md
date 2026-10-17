@@ -2,6 +2,16 @@
 
 ## Decisions
 
+### Owner-approved amendment, 2026-10-17
+
+The specification's approved session-default/development-identity amendment supersedes
+earlier rejected-default/explicit-opt-in and universal-OIDC decisions below. Reuse defaults
+are disclosed default selections, not affirmative user consent, and require privacy review
+before production. Loopback-only nonproduction sign-in is an explicitly approved development
+exception, never production authentication. Provider acceptance, retention approval,
+accessibility review, latency measurement, and real analyst outcomes remain unverified
+until their evidence is recorded; automated/mocked tests do not establish these outcomes.
+
 ### 1. Browser application and analyst identity
 
 **Decision**: Use a single Python/Streamlit application with OIDC sign-in through `st.login`/`st.user`. Derive the stable analyst key from the identity provider's issuer and subject, not a mutable email address. Require authentication before showing private reports or allowing exports. Enforce ownership in repository/service operations, not only in the UI.

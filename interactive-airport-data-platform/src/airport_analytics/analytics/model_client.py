@@ -14,7 +14,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from openai import APIConnectionError, APIStatusError, APITimeoutError
 
-from airport_analytics.analytics.budget import BudgetLedger, BudgetReservation
+from airport_analytics.analytics.budget import BudgetLedger, BudgetReservation, Settlement
 from airport_analytics.analytics.plan_schema import (
     SCHEMA_PATH,
     _load_schema,
@@ -39,6 +39,16 @@ from airport_analytics.models import AnalysisPlan, ProviderUsage
 from airport_analytics.observability.tracing import TracingConfig
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _notify_settlement(settlement: Settlement) -> None:
+    if settlement.over_reservation:
+        LOGGER.error(
+            "Provider charge exceeded reservation: reservation=%s actual_usd=%s exhausted=%s",
+            settlement.reservation_id,
+            settlement.actual_usd,
+            settlement.budget_exhausted,
+        )
 
 
 def _groq_output_schema(schema: dict[str, Any]) -> dict[str, Any]:
@@ -384,9 +394,11 @@ class LangChainPlanClient:
                     "provider acceptance is unknown after a failed call; no automatic retry",
                 )
             if trace_reservation is not None and self.budget is not None:
-                self.budget.settle(
-                    trace_reservation.reservation_id,
-                    actual_usd=trace_reservation.reserved_usd,
+                _notify_settlement(
+                    self.budget.settle(
+                        trace_reservation.reservation_id,
+                        actual_usd=trace_reservation.reserved_usd,
+                    )
                 )
             safe_error = _safe_provider_error(exc)
             LOGGER.warning(
@@ -399,15 +411,19 @@ class LangChainPlanClient:
         parsed, raw, parsing_error = self._response_parts(response)
         usage = self._usage(raw)
         if inference_reservation is not None and self.budget is not None:
-            self.budget.settle(
-                inference_reservation.reservation_id,
-                input_tokens=usage.input_tokens,
-                output_tokens=usage.output_tokens,
+            _notify_settlement(
+                self.budget.settle(
+                    inference_reservation.reservation_id,
+                    input_tokens=usage.input_tokens,
+                    output_tokens=usage.output_tokens,
+                )
             )
         if trace_reservation is not None and self.budget is not None:
-            self.budget.settle(
-                trace_reservation.reservation_id,
-                actual_usd=trace_reservation.reserved_usd,
+            _notify_settlement(
+                self.budget.settle(
+                    trace_reservation.reservation_id,
+                    actual_usd=trace_reservation.reserved_usd,
+                )
             )
         if parsing_error is not None or parsed is None:
             raise InvalidPlanError("The provider did not return a valid structured plan.") from (

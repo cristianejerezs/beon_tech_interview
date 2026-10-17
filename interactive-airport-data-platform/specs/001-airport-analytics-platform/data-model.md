@@ -81,7 +81,10 @@ Do not use email as the ownership key. Avoid copying identity claims into report
 | `consent_state` | Current session-level state for each disclosed reuse purpose. |
 | `notice_version` | Version of the notice presented for consent. |
 
-Session consent is not a permanent account preference. A new session starts with reuse disabled; an analyst may enable it later and may disable or re-enable it during that session.
+Session consent is not a permanent account preference. Under the owner-approved amendment,
+a new session defaults eligible purposes on with visible notice and a `v2-default-on` grant.
+This is a default selection, not an affirmative click. An analyst may disable or re-enable it;
+deployment and production retention gates still apply.
 
 ### Consent Event
 
@@ -92,7 +95,7 @@ Append-only record of a consent action.
 | `consent_event_id` | Opaque event identifier. |
 | `analyst_id`, `session_id` | Actor and session for the event. |
 | `purpose` | Specific reuse purpose presented to the analyst. |
-| `action` | Explicit grant or withdrawal. |
+| `action` | Grant or withdrawal; notice version identifies a default-on grant. |
 | `occurred_at` | Event time. |
 | `notice_version` | Exact disclosure version accepted or withdrawn. |
 

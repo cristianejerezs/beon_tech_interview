@@ -2,8 +2,8 @@
 
 ## Analyst interaction
 
-1. An analyst authenticates through the configured OIDC provider. The application identifies the analyst by stable issuer/subject claims.
-2. Before the first question in an application session, the UI explains each shared-reuse purpose and asks for an explicit choice. Reuse starts disabled; the analyst can enable it later, disable it, or enable it again during that session.
+1. An analyst authenticates through OIDC using stable issuer/subject claims. The approved development-only exception permits a shared developer identity only with explicit enablement, nonproduction mode, and explicit loopback binding; it never substitutes for production authentication.
+2. Before the first question, the UI explains default-on optional reuse for deployment-enabled purposes and records session/purpose grants under `v2-default-on`. These defaults are not affirmative user clicks. The analyst can disable, enable later, or re-enable; creating a shared copy requires a separate action.
 3. The analyst enters a non-empty plain-text question of at most 2,000 Unicode code points after
    trimming surrounding whitespace and may ask follow-ups against the minimum active structured
    analysis context. Empty, non-text, or oversized input is rejected before model invocation or
@@ -34,7 +34,7 @@
 
 ## Consent and reuse boundary
 
-- Consent is explicit, session-scoped, purpose-specific, and recorded with a notice version.
+- Reuse authorization is session-scoped, purpose-specific, reversible, and recorded with a notice version distinguishing default-on choices from affirmative clicks.
 - Content created while consent is off is never eligible for shared reuse, even if consent is enabled later.
 - Withdrawal stops future reuse. Already-created shared artifacts remain, as disclosed in the consent notice.
 - Shared artifacts are stored separately from private report history and do not include analyst identity by default.

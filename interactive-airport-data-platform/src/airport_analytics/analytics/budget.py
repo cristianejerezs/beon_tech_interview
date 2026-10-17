@@ -125,6 +125,16 @@ class BudgetLedger:
         spent_and_reserved = self._sum_period(connection, period_start)
         if spent_and_reserved + reservation_usd > self.monthly_cap_usd:
             raise BudgetExceededError("The shared deployment monthly spending cap is exhausted.")
+        if (
+            not free_plan
+            and connection.execute(
+                "SELECT 1 FROM usage_reservations WHERE status = 'reserved' "
+                "AND acceptance_uncertain = 1 AND free_plan = 0 LIMIT 1"
+            ).fetchone()
+        ):
+            raise CostUnboundedError(
+                "A prior paid request has unresolved acceptance or cost; reconcile it first."
+            )
 
         if free_plan:
             usage = connection.execute(
@@ -280,7 +290,7 @@ class BudgetLedger:
     def mark_uncertain(self, reservation_id: str, reason: str) -> None:
         with self.storage.transaction() as connection:
             cursor = connection.execute(
-                "UPDATE usage_reservations SET failure_reason = ? "
+                "UPDATE usage_reservations SET failure_reason = ?, acceptance_uncertain = 1 "
                 "WHERE reservation_id = ? AND status = 'reserved'",
                 (reason, reservation_id),
             )
@@ -300,7 +310,7 @@ class BudgetLedger:
             cursor = connection.execute(
                 """
                 UPDATE usage_reservations
-                SET status = 'released', actual_usd = '0', settled_at = ?,
+                SET status = 'released', acceptance_uncertain = 0, actual_usd = '0', settled_at = ?,
                     failure_reason = 'provider confirmed request was not accepted'
                 WHERE reservation_id = ? AND status = 'reserved'
                 """,
@@ -382,7 +392,7 @@ class BudgetLedger:
                 """
                 UPDATE usage_reservations
                 SET actual_usd = ?, input_tokens = ?, output_tokens = ?,
-                    status = 'settled', settled_at = ?, failure_reason = ?
+                    status = 'settled', acceptance_uncertain = 0, settled_at = ?, failure_reason = ?
                 WHERE reservation_id = ?
                 """,
                 (

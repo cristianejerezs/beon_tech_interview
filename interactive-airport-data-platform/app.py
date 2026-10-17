@@ -27,7 +27,8 @@ from airport_analytics.auth import (
 from airport_analytics.config import Settings
 from airport_analytics.consent.repository import ConsentPurpose, ConsentRepository
 from airport_analytics.consent.service import ConsentService
-from airport_analytics.errors import PlatformError, user_safe_message
+from airport_analytics.data.loader import DatasetLoader
+from airport_analytics.errors import DatasetUnavailableError, PlatformError, user_safe_message
 from airport_analytics.history.repository import ReportRepository
 from airport_analytics.observability.tracing import TracingConfig
 from airport_analytics.reports.export import export_report_csv, export_report_pdf
@@ -55,9 +56,20 @@ def _storage(database_path: str) -> Storage:
     return Storage(database_path)
 
 
-@st.cache_resource(show_spinner="Validating the local source data...")
+@st.cache_resource(show_spinner="Validating the local source data...", max_entries=2)
+def _snapshot_executor(
+    source_data_dir: str, timeout_seconds: int, fingerprint: tuple[tuple[str, str], ...]
+) -> DuckDBExecutor:
+    executor = DuckDBExecutor(source_data_dir, timeout_seconds=timeout_seconds)
+    if DatasetLoader(source_data_dir).fingerprint() != fingerprint:
+        executor.close()
+        raise DatasetUnavailableError("Source files changed during validation; retry after saving.")
+    return executor
+
+
 def _executor(source_data_dir: str, timeout_seconds: int) -> DuckDBExecutor:
-    return DuckDBExecutor(source_data_dir, timeout_seconds=timeout_seconds)
+    fingerprint = DatasetLoader(source_data_dir).fingerprint()
+    return _snapshot_executor(source_data_dir, timeout_seconds, fingerprint)
 
 
 def _identity() -> AnalystIdentity | None:
@@ -232,8 +244,18 @@ def _faq_panel(reports: ReportRepository) -> None:
         for artifact in artifacts:
             st.write(artifact.content["question"])
             st.write(artifact.content["answer"])
-            st.json(artifact.content["definitions"])
-            st.json(artifact.content["scope"])
+            st.table(
+                [
+                    {"Definition": name, "Value": str(value)}
+                    for name, value in artifact.content["definitions"].items()
+                ]
+            )
+            st.table(
+                [
+                    {"Scope": name, "Value": str(value)}
+                    for name, value in artifact.content["scope"].items()
+                ]
+            )
             st.dataframe(artifact.content["summary_rows"], hide_index=True)
             st.button(
                 "Use this FAQ question",
@@ -291,6 +313,16 @@ def _render_report(
         mime="application/pdf",
         key=f"pdf_{report.report_id}",
     )
+    if report.result_payload.get("routes"):
+        st.download_button(
+            "Download supporting routes (CSV)",
+            data=export_report_csv(
+                reports.get_report(identity, report.report_id), supporting_routes=True
+            ),
+            file_name=f"airport-routes-{report.report_id}.csv",
+            mime="text/csv",
+            key=f"routes_{report.report_id}",
+        )
     if col_delete.button("Delete private report", key=f"delete_{report.report_id}"):
         reports.delete_report(identity, report.report_id)
         st.session_state["active_report_id"] = None

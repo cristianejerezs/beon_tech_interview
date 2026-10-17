@@ -81,6 +81,8 @@ class DatasetSnapshot(StrictModel):
     missingness: dict[str, float]
     join_key_coverage: dict[str, float]
     validated_at: str
+    grain: list[str] = Field(default_factory=list)
+    repeated_observations: int = Field(default=0, ge=0)
 
 
 class ReportContent(StrictModel):

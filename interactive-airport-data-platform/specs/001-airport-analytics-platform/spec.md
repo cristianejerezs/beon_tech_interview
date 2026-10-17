@@ -12,6 +12,17 @@ from the user."
 
 ## Clarifications
 
+### Approved amendment 2026-10-17: session defaults and development identity
+
+The owner explicitly approved preserving default-on session reuse choices in both sign-in
+modes and the guarded local development sign-in exception. This amendment supersedes earlier
+default-off/explicit-opt-in wording in clarification history, user-story descriptions, and
+edge cases below. Default selections are not evidence of an affirmative user click or a
+legal determination of valid consent. Production reuse still requires approved retention
+and privacy procedures. Shared copies still require a separate analyst action.
+Hosted/tracing acknowledgement controls default on, remain visible and reversible, and do
+not enable tracing, override deployment gates, or change provider/budget boundaries.
+
 ### Session 2026-10-17
 
 - Q: Should each analyst’s last ten reports be private to that analyst, limited to the current browser, or shared with other users? → A: Private per-analyst history; only its creator can access saved reports.
@@ -270,19 +281,19 @@ asks a focused clarification or explains the data limitation.
   analyst, and only the analyst who created a report MUST be able to access it in their history.
 - **FR-018**: When an analyst requests an export, the platform MUST provide a PDF containing the
   complete report and CSV files containing the report's tabular results.
-- **FR-019**: The platform MUST NOT reuse an analyst's question or generated report outside that
-  analyst's private history for shared FAQs or system improvement unless the analyst has explicitly
-  opted in during the session.
-- **FR-020**: The platform MUST ask for optional consent before the analyst submits the first
-  question in each session. Declining MUST NOT prevent private analysis, and the analyst MUST be
-  able to opt in later during the same session.
+- **FR-019**: Shared FAQ/system-improvement copies MUST require an active session/purpose
+  grant and an explicit create-copy action. Eligible purposes default on where deployment
+  policy permits; the audit notice MUST distinguish default selections from affirmative opt-in.
+- **FR-020**: Before the first question, the platform MUST visibly explain default-on optional
+  reuse and permit disabling it without preventing private analysis. Re-enabling later MUST
+  be possible. Deployment-disabled purposes MUST remain off.
 - **FR-021**: Session-level consent MUST apply only to questions and reports created while consent
-  is active. Each new session MUST require a new opt-in before its content is reused. The analyst
+  is active. Each new session MUST establish its own disclosed choices and grant records. The analyst
   MUST be able to turn reuse off or back on at any time; content created while consent is off MUST
   remain excluded from shared FAQs and system improvement.
 - **FR-022**: Turning consent off MUST stop future reuse but MUST NOT remove content already reused
   in shared FAQs or system-improvement materials.
-- **FR-023**: Before an analyst opts in, the consent explanation MUST disclose that previously
+- **FR-023**: Before a session grant is recorded, the consent explanation MUST disclose that previously
   reused content remains in shared materials if the analyst later turns reuse off.
 - **FR-024**: The platform MUST use LangChain-supported model integrations and MAY use local or
   hosted models. Across the entire application deployment, hosted model inference MUST use a free
@@ -335,6 +346,10 @@ asks a focused clarification or explains the data limitation.
   identity provider before using private report history or other analyst-specific resources. The
   application MUST identify an analyst by the provider issuer and stable subject, not by mutable
   email address, and MUST enforce ownership on every private-resource operation.
+  Approved exception: explicitly enabled, nonproduction, explicitly loopback-bound development
+  sessions MAY use one separately namespaced shared developer identity. This is not real
+  authentication; the UI MUST disclose shared history, prohibit production and non-loopback
+  use, and warn against proxy/tunnel exposure. Normal and production sign-in still require OIDC.
 - **FR-032**: The platform MUST accept a non-empty plain-text question of at most 2,000 Unicode
   code points
   after trimming surrounding whitespace. It MUST reject an empty or oversized question

@@ -17,7 +17,7 @@ From the repository root, after implementation has created the application depen
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -e ".[dev]"
 streamlit run app.py
 ```
 
@@ -52,3 +52,65 @@ The completed implementation should include tests for these scenarios:
 17. **Production reuse gate**: verify shared reuse is disabled for production configuration until a retention/deletion policy covers identity mappings, reports, consent events, shared artifacts, and backups.
 
 Detailed data and interface shapes are in [data-model.md](./data-model.md) and [contracts/](./contracts).
+
+## Convergence implementation and pending release evidence
+
+Owner-approved session-default and loopback-only development exceptions are documented in
+[spec.md](spec.md). Historical default-off test descriptions above must be read with that
+amendment: disable default-on purposes before private testing, and verify disabled choices
+remain off. Neither defaults nor tests establish legal consent or production approval.
+
+Reports now label observed date bounds in their filtered population; full-snapshot geographic
+coverage remains separately labelled. Joined coverage uses the effective filtered population
+before match-only exclusions. Destination counts include supporting routes (up to 500,
+explicitly marked incomplete if truncated), a separate CSV, and PDF route/scope evidence.
+Ranking cutoff ties are disclosed; secondary ordering uses group labels, not a unique winner.
+Source validation checks field types, grain keys, nulls, and duplicates; repeated flight
+observations with different source-row IDs are retained and counted in snapshot metadata.
+Source files are content-fingerprinted before cached executor reuse.
+
+Uncertain paid requests persist and block further paid authorization across restarts/months
+until evidence-based reconciliation. Charge overruns are logged without prompt/response bodies.
+Never clear or delete the ledger to bypass these restrictions.
+
+### Provider acceptance and latency commands
+
+**Status: NOT RUN. No live provider pass or latency baseline is claimed.**
+
+Review the configured provider/model, account quotas, current data-use/retention terms,
+fees/rates, and [main quickstart](../../QUICKSTART.md) before dispatch. Use the normal configured
+ledger. Disable tracing. The following explicitly dispatches the 12 synthetic golden questions
+through the normal provider/disclosure/budget gates; it does not send source rows or identities:
+
+```powershell
+python -m airport_analytics.analytics.evaluation --run-live --acknowledge-hosted-processing
+```
+
+Set the provider and model explicitly in the environment before running each candidate.
+The CLI emits only per-case IDs, safe error categories, pass flags, timing/environment and
+snapshot identifiers, not prompts, raw provider output, keys, or report rows. It exits nonzero
+if fewer than 11/12 generated interpretations match scope or any generated numeric result
+differs from the independent fixture (absolute floating tolerance 1e-12).
+Scope comparison is conservative: equivalent alternative filter/date encodings require
+manual review rather than being silently counted as a pass.
+
+The first model call may be cold; subsequent sequential calls are warm/provider-dependent.
+Dataset validation time is reported separately. Record hardware, host, Python/dependency
+versions, candidate terms/quota review, cold/warm conditions, failures, and the returned timings
+here after execution; there is no latency pass/fail threshold.
+
+For an opt-in pytest baseline with the same real-provider acceptance gate:
+
+```powershell
+$env:AIRPORT_RUN_LIVE_EVALUATION = "true"
+python -m pytest -q -s tests\performance\test_report_latency.py
+Remove-Item Env:\AIRPORT_RUN_LIVE_EVALUATION
+```
+
+This opt-in test is skipped during normal automated validation. Do not run both commands
+unnecessarily: each dispatches another 12 requests. No automatic retries or fallback occur.
+
+Still required: actual candidate comparison and selected provider rationale (T058/T071),
+measured latency (T059/T078), [owner-approved retention](../../docs/privacy-data-retention.md)
+(T060/T073), [five real analyst sessions](../../tests/acceptance/analyst_study.md)
+(T061/T074), and authenticated browser keyboard/focus/accessibility review (T062/T075).

@@ -37,9 +37,10 @@ def _cell_value(value: Any) -> str:
     return str(value)
 
 
-def export_report_csv(report: ReportContent) -> bytes:
+def export_report_csv(report: ReportContent, *, supporting_routes: bool = False) -> bytes:
     output = io.StringIO(newline="")
-    columns = report.result_payload["columns"]
+    table = report.result_payload["routes"] if supporting_routes else report.result_payload
+    columns = table["columns"]
     writer = csv.DictWriter(
         output,
         fieldnames=columns,
@@ -47,7 +48,7 @@ def export_report_csv(report: ReportContent) -> bytes:
         lineterminator="\r\n",
     )
     writer.writeheader()
-    for row in report.result_payload["rows"]:
+    for row in table["rows"]:
         writer.writerow({key: _cell_value(row.get(key)) for key in columns})
     return output.getvalue().encode("utf-8-sig")
 
@@ -101,6 +102,8 @@ def export_report_pdf(report: ReportContent) -> bytes:
     ]
     for label, value in report.definitions.items():
         story.append(Paragraph(f"<b>{escape(label)}:</b> {escape(str(value))}", body_style))
+    for label, value in report.result_payload["scope"].items():
+        story.append(Paragraph(f"<b>{escape(label)}:</b> {escape(str(value))}", body_style))
     story.append(Spacer(1, 4 * mm))
     story.append(Paragraph("Supporting result table", base["Heading2"]))
     table_data = [
@@ -126,6 +129,27 @@ def export_report_pdf(report: ReportContent) -> bytes:
         )
     )
     story.extend([table, Spacer(1, 4 * mm)])
+    routes = report.result_payload.get("routes", {})
+    if routes:
+        story.append(Paragraph("Supporting routes", base["Heading2"]))
+        status = "Complete." if routes["complete"] else "Incomplete: limited to 500 routes."
+        story.append(Paragraph(escape(routes["population"] + " " + status), body_style))
+        route_table = LongTable(
+            [
+                [Paragraph(escape(column), body_style) for column in routes["columns"]],
+                *[
+                    [
+                        Paragraph(escape(_cell_value(row[column])), body_style)
+                        for column in routes["columns"]
+                    ]
+                    for row in routes["rows"]
+                ],
+            ],
+            repeatRows=1,
+            hAlign="LEFT",
+        )
+        route_table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
+        story.extend([route_table, Spacer(1, 4 * mm)])
 
     if report.result_payload["join_coverage"]:
         story.append(Paragraph("Reference/context join coverage", base["Heading2"]))

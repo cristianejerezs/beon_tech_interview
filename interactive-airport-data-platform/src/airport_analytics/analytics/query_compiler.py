@@ -57,7 +57,7 @@ def _compile_filter(field_id: str, operator: str, value: Any) -> tuple[str, list
     return f"{expression} {OPERATOR_SQL[operator]} ?", [value]
 
 
-def compile_analysis_plan(plan: AnalysisPlan) -> CompiledQuery:
+def compile_analysis_plan(plan: AnalysisPlan, *, evidence: str | None = None) -> CompiledQuery:
     plan = validate_analysis_plan(plan.model_dump(mode="json"))
     if plan.status != "ready" or plan.metric_id not in METRICS:
         raise InvalidPlanError("Only ready plans using a catalog metric can be compiled.")
@@ -102,8 +102,47 @@ def compile_analysis_plan(plan: AnalysisPlan) -> CompiledQuery:
             predicates.append("make_date(f.year, f.month, f.day) <= ?")
             parameters.append(plan.time_range.end)
 
-    if plan.metric_id == "mean_delay_by_weather_context":
+    scope_predicates = list(predicates)
+    if plan.metric_id == "mean_delay_by_weather_context" and evidence is None:
         predicates.append("w.origin IS NOT NULL")
+
+    if evidence is not None:
+        source = " FROM flights f " + joins_sql
+        where = " WHERE " + " AND ".join(scope_predicates) if scope_predicates else ""
+        if evidence == "scope":
+            parts = [
+                "MIN(make_date(f.year, f.month, f.day)) AS period_start",
+                "MAX(make_date(f.year, f.month, f.day)) AS period_end",
+                "COUNT(*) AS total",
+            ]
+            for join, key in (
+                ("airlines", "a.carrier"),
+                ("planes", "p.tailnum"),
+                ("weather", "w.origin"),
+            ):
+                if join in joins:
+                    parts.append(f"COUNT({key}) AS {join}_matched")
+            sql = "SELECT " + ", ".join(parts) + source + where
+        elif evidence == "routes" and plan.metric_id == "distinct_destination_count":
+            parts = [f'{item.expression} AS "{item.dimension_id}"' for item in selected_dimensions]
+            parts.extend(
+                ["f.origin AS route_origin", "f.dest AS destination", "COUNT(*) AS flights"]
+            )
+            grain = [item.expression for item in selected_dimensions] + ["f.origin", "f.dest"]
+            sql = (
+                "SELECT "
+                + ", ".join(parts)
+                + source
+                + where
+                + " GROUP BY "
+                + ", ".join(grain)
+                + " ORDER BY "
+                + ", ".join(grain)
+                + " LIMIT 501"
+            )
+        else:
+            raise ValueError("Unknown evidence query.")
+        return CompiledQuery(sql=sql, parameters=tuple(parameters), plan=plan)
 
     sql = (
         "SELECT "
@@ -121,6 +160,9 @@ def compile_analysis_plan(plan: AnalysisPlan) -> CompiledQuery:
     if plan.sort is not None:
         sort_field = "metric_value" if plan.sort.field_id in METRICS else plan.sort.field_id
         sql += f' ORDER BY "{sort_field}" {plan.sort.direction.upper()} NULLS LAST'
+        for dimension in selected_dimensions:
+            if dimension.dimension_id != sort_field:
+                sql += f', "{dimension.dimension_id}" ASC NULLS LAST'
     elif selected_dimensions:
         sql += f' ORDER BY "{selected_dimensions[0].dimension_id}" ASC NULLS LAST'
 

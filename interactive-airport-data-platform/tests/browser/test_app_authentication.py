@@ -123,9 +123,9 @@ def test_development_reuse_opt_in_shared_faq_and_question_selection(monkeypatch,
     next(button for button in app.button if button.label == "Generate report").click().run()
     assert generator.generate.call_args.args[0] == report.question
 
-    next(
-        toggle for toggle in app.toggle if toggle.label == "Enable FAQ examples reuse"
-    ).set_value(False).run()
+    next(toggle for toggle in app.toggle if toggle.label == "Enable FAQ examples reuse").set_value(
+        False
+    ).run()
     assert not app.error
     assert len(repository.list_shared_artifacts("faq")) == 1
     app.run()

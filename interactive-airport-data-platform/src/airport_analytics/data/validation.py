@@ -6,7 +6,13 @@ from pathlib import Path
 
 import duckdb
 
-from airport_analytics.data.catalog import DATASETS, SCHEMA_VERSION
+from airport_analytics.data.catalog import (
+    DATASETS,
+    SCHEMA_VERSION,
+    SOURCE_FRACTIONAL_FIELDS,
+    SOURCE_GRAINS,
+    SOURCE_TEXT_FIELDS,
+)
 from airport_analytics.errors import DatasetUnavailableError
 from airport_analytics.models import DatasetSnapshot
 
@@ -94,6 +100,7 @@ def build_snapshots(
             raise DatasetUnavailableError(
                 f"Unexpected columns in {dataset.filename}; analytics cannot use this snapshot."
             )
+        validate_dataset_structure(connection, dataset.dataset_id, describe)
 
         row_count = int(
             connection.execute(f"SELECT COUNT(*) FROM {dataset.table_name}").fetchone()[0]
@@ -130,6 +137,46 @@ def build_snapshots(
                 missingness=missingness,
                 join_key_coverage=join_key_coverage,
                 validated_at=validated_at,
+                grain=list(SOURCE_GRAINS[dataset.dataset_id]),
+                repeated_observations=(
+                    int(
+                        connection.execute(
+                            "SELECT COALESCE(SUM(n - 1), 0) FROM "
+                            "(SELECT * EXCLUDE (column00), COUNT(*) AS n FROM flights "
+                            "GROUP BY ALL)"
+                        ).fetchone()[0]
+                    )
+                    if dataset.dataset_id == "flights"
+                    else 0
+                ),
             )
         )
     return snapshots
+
+
+def validate_dataset_structure(
+    connection: duckdb.DuckDBPyConnection, dataset_id: str, describe: list
+) -> None:
+    dataset = DATASETS[dataset_id]
+    for column, actual_type, *_ in describe:
+        if column in SOURCE_TEXT_FIELDS[dataset_id]:
+            allowed = {"VARCHAR"}
+        elif column == "time_hour":
+            allowed = {"TIMESTAMP WITH TIME ZONE"}
+        elif column in SOURCE_FRACTIONAL_FIELDS[dataset_id]:
+            allowed = {"BIGINT", "DOUBLE"}
+        else:
+            allowed = {"BIGINT"}
+        if actual_type not in allowed:
+            raise DatasetUnavailableError(
+                f"Unexpected source type for {dataset_id}.{column}; expected {sorted(allowed)}."
+            )
+    keys = SOURCE_GRAINS[dataset_id]
+    nulls = " OR ".join(f'"{key}" IS NULL' for key in keys)
+    group = ", ".join(f'"{key}"' for key in keys)
+    if connection.execute(f"SELECT 1 FROM {dataset.table_name} WHERE {nulls} LIMIT 1").fetchone():
+        raise DatasetUnavailableError(f"Missing source grain key in {dataset_id}.")
+    if connection.execute(
+        f"SELECT 1 FROM {dataset.table_name} GROUP BY {group} HAVING COUNT(*) > 1 LIMIT 1"
+    ).fetchone():
+        raise DatasetUnavailableError(f"Duplicate source grain key in {dataset_id}.")

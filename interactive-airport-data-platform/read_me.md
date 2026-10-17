@@ -41,16 +41,21 @@ as causal findings. The application uses the supplied historical snapshot, not l
 
 Analysts can refine reports with follow-up questions. Private history retains at most each
 analyst's ten most recent reports. Reports can be exported as a complete PDF and their tabular
-results as CSV.
+results as CSV. Distinct-destination reports also provide supporting routes and a separate
+route CSV, with an explicit warning if the 500-row evidence bound truncates the table.
+Periods describe observed dates within the effective filters; reference/weather coverage
+uses that filtered population before match-only exclusions. PDFs include active scope and
+supporting evidence, and rankings disclose ties crossing the result limit.
 
-Reuse of questions or reports outside private history requires explicit, reversible,
-session-scoped consent. Declining does not block analysis; consent can be enabled later or
-withdrawn. Previously reused material remains after withdrawal. Production shared reuse stays
-disabled until retention and deletion periods and procedures, including backup handling, are
-approved by the deployment owner.
+Reuse choices are purpose-specific, reversible, and session-scoped. Under the owner-approved
+requirements amendment, permitted purposes start enabled with a visible notice and off switch
+in all sign-in modes. Declining does not block analysis; choices can be enabled later or
+withdrawn. Default selection is not affirmative legal consent. Previously reused material
+remains after withdrawal. Production shared reuse stays disabled until retention and deletion
+periods and procedures, including backup handling, are approved by the deployment owner.
 
-Local development sign-in enables reuse controls for testing, but FAQ and system-improvement
-consent still start off and require explicit session opt-in. Consented FAQ copies can be read
+Local development sign-in enables default-on FAQ and system-improvement controls for testing.
+Creating a shared report copy still requires its separate explicit action. FAQ copies can be read
 under **Shared FAQs** and their questions reused as new inputs. Remote-model access still
 requires configured credentials, processing disclosure, and budget authorization.
 
@@ -76,6 +81,10 @@ requires configured credentials, processing disclosure, and budget authorization
   on the selected host/provider and record a baseline for future target-setting.
 
 ## Quality gates
+
+The [acceptance quickstart](./specs/001-airport-analytics-platform/quickstart.md#provider-acceptance-and-latency-commands)
+documents the opt-in live-evaluation commands and outstanding external evidence. The retention
+worksheet, analyst protocol, and partial accessibility review are not completed release approvals.
 
 1. Establish a fixed golden set of 12 supported questions (three per analysis area) with
    independently calculated expected metrics and scope. A candidate model must interpret at least
@@ -117,3 +126,4 @@ records tokens used to build the solution.
 | Date / work period | Implementation phase or task IDs | Usage source / model | Input tokens | Cached input tokens | Output tokens | Total tokens | Notes |
 |---|---|---|---:|---:|---:|---:|---|
 | 2026-10-17 | Account-level Copilot usage export; not attributable to this repository | Copilot AI credits (not token counts) | — | — | — | — | 167.0928263 credits; gross USD 1.670928157, fully discounted (net USD 0). Repository and workflow fields are blank in the export. Token usage for this implementation remains unavailable. |
+| 2026-10-17 | Convergence implementation, T063-T079 | No new authoritative project/session usage export supplied | — | — | — | — | Report evidence, source integrity/freshness, budget uncertainty/alerts, approved requirements exceptions, restart tests and release tooling. No token estimate or attribution of the prior account-wide credits. External acceptance evidence remains pending. |

@@ -24,7 +24,8 @@ GLOSSARY: dict[str, str] = {
     ),
     "join_coverage": (
         "Join coverage is the number of source records matched to a reference/context row "
-        "divided by all source records in the current flight snapshot."
+        "divided by the flight records in the report's effective filtered scope, "
+        "before exclusions that require a successful reference/context match."
     ),
     "weather_association": (
         "Weather comparisons are contextual associations for matched origin/time observations; "
@@ -67,11 +68,17 @@ def build_report_metadata(plan: AnalysisPlan, result: QueryResult) -> dict[str, 
         "planes": "aircraft",
         "weather": "weather_origin_time_exact",
     }
-    coverage = {
-        coverage_key_by_join[join]: result.manifest.join_coverage[coverage_key_by_join[join]]
-        for join in sorted(joins)
-        if join in coverage_key_by_join
-    }
+    coverage = {}
+    for join in sorted(joins):
+        if join in coverage_key_by_join:
+            total = result.scope_evidence["total"]
+            matched = result.scope_evidence[f"{join}_matched"]
+            coverage[coverage_key_by_join[join]] = {
+                "total": total,
+                "matched": matched,
+                "unmatched": total - matched,
+                "fraction": matched / total if total else 0.0,
+            }
 
     active_period = {
         "start": _date_label(plan.time_range.start) if plan.time_range else None,
@@ -83,6 +90,9 @@ def build_report_metadata(plan: AnalysisPlan, result: QueryResult) -> dict[str, 
         active_period["start"] = result.manifest.flight_period_start
     if active_period["end"] is None:
         active_period["end"] = result.manifest.flight_period_end
+    if result.scope_evidence:
+        active_period["start"] = str(result.scope_evidence["period_start"])
+        active_period["end"] = str(result.scope_evidence["period_end"])
 
     definitions = {
         "metric": metric.description,
@@ -91,6 +101,7 @@ def build_report_metadata(plan: AnalysisPlan, result: QueryResult) -> dict[str, 
         "numerator": metric.numerator or "Not applicable",
         "denominator": metric.denominator or "Not applicable",
         "period": f"{active_period['start']} through {active_period['end']}",
+        "period_basis": "Observed date bounds in the effective filtered flight population.",
     }
     scope = {
         "filters": [
@@ -102,6 +113,18 @@ def build_report_metadata(plan: AnalysisPlan, result: QueryResult) -> dict[str, 
         "source_snapshot": result.snapshot_id,
     }
     limitations = list(metric.caveats)
+    if result.ranking.get("has_visible_ties"):
+        limitations.append("Equal ranking values are tied; secondary ordering is by group labels.")
+    if result.ranking.get("cutoff_tie"):
+        limitations.append(
+            "A tie crosses the requested result limit; additional tied groups are omitted. "
+            "The last displayed rank is not exclusive."
+        )
+    if result.routes and not result.routes["complete"]:
+        limitations.append(
+            "Supporting route evidence is limited to 500 rows and is incomplete; "
+            "do not reconcile the distinct count from this truncated table."
+        )
     if coverage:
         limitations.append(
             "Reference/context records may be unmatched; matched and unmatched counts are shown."

@@ -38,14 +38,14 @@ def build_figure(report: ReportContent) -> Any | None:
             y="metric_value",
             markers=True,
             labels=labels,
-            title=metric.description,
+            title=f"{metric.description} ({metric.unit}); {report.definitions['period']}",
         )
     return px.bar(
         data,
         x=dimension,
         y="metric_value",
         labels=labels,
-        title=metric.description,
+        title=f"{metric.description} ({metric.unit}); {report.definitions['period']}",
         hover_data=["flight_count", "observation_count"],
     )
 
@@ -83,17 +83,25 @@ def render_report(report: ReportContent, st: Any) -> None:
                 "Matched records": counts["matched"],
                 "Unmatched records": counts["unmatched"],
                 "Coverage": f"{counts['fraction']:.2%}",
-                "Population": f"{counts['total']:,} source records in the full snapshot",
+                "Population": (
+                    f"{counts['total']:,} records in the filtered scope before match exclusions"
+                ),
             }
             for name, counts in coverage.items()
         ]
-        st.dataframe(coverage_rows, hide_index=True, use_container_width=True)
+        st.dataframe(coverage_rows, hide_index=True)
 
     figure = build_figure(report)
     st.subheader("Supporting results")
     if figure is not None:
-        st.plotly_chart(figure, use_container_width=True)
-    st.dataframe(report.result_payload["rows"], hide_index=True, use_container_width=True)
+        st.plotly_chart(figure)
+    st.dataframe(report.result_payload["rows"], hide_index=True)
+    routes = report.result_payload.get("routes", {})
+    if routes:
+        st.subheader("Supporting routes")
+        st.caption(routes["population"])
+        st.caption("Complete route table." if routes["complete"] else "Truncated to 500 routes.")
+        st.dataframe(routes["rows"], hide_index=True)
 
     glossary = report.result_payload["glossary"]
     if glossary:

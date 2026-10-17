@@ -5,7 +5,31 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
+
+SOURCE_TEXT_FIELDS = {
+    "flights": frozenset({"carrier", "tailnum", "origin", "dest"}),
+    "airports": frozenset({"faa", "name", "dst", "timezone_name"}),
+    "airlines": frozenset({"carrier", "name"}),
+    "planes": frozenset({"tailnum", "type", "manufacturer", "model", "engine"}),
+    "weather": frozenset({"origin"}),
+}
+SOURCE_FRACTIONAL_FIELDS = {
+    "flights": frozenset(),
+    "airports": frozenset({"latitude", "longitude"}),
+    "airlines": frozenset(),
+    "planes": frozenset(),
+    "weather": frozenset(
+        {"temp", "dewp", "humid", "wind_speed", "wind_gust", "precip", "pressure", "visib"}
+    ),
+}
+SOURCE_GRAINS = {
+    "flights": ("column00",),
+    "airports": ("faa",),
+    "airlines": ("carrier",),
+    "planes": ("tailnum",),
+    "weather": ("origin", "time_hour"),
+}
 
 
 @dataclass(frozen=True)

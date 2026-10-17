@@ -7,7 +7,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class Storage:
@@ -93,13 +93,14 @@ class Storage:
                         status IN ('reserved', 'settled', 'failed', 'released')
                     ),
                     failure_reason TEXT,
+                    acceptance_uncertain INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL,
                     settled_at TEXT
                 );
                 CREATE INDEX IF NOT EXISTS idx_usage_period_status
                     ON usage_reservations(period_start_utc, status);
                 INSERT OR REPLACE INTO schema_metadata(key, value)
-                    VALUES ('schema_version', '2');
+                    VALUES ('schema_version', '3');
                 """
             )
             usage_columns = {
@@ -113,12 +114,18 @@ class Storage:
                 "free_plan": "INTEGER NOT NULL DEFAULT 0",
                 "max_input_tokens": "INTEGER NOT NULL DEFAULT 0",
                 "max_output_tokens": "INTEGER NOT NULL DEFAULT 0",
+                "acceptance_uncertain": "INTEGER NOT NULL DEFAULT 0",
             }
             for name, definition in migrations.items():
                 if name not in usage_columns:
                     connection.execute(
                         f"ALTER TABLE usage_reservations ADD COLUMN {name} {definition}"
                     )
+                    if name == "acceptance_uncertain":
+                        connection.execute(
+                            "UPDATE usage_reservations SET acceptance_uncertain = 1 "
+                            "WHERE status = 'reserved' AND failure_reason IS NOT NULL"
+                        )
         finally:
             connection.close()
 

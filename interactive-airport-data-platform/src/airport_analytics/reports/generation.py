@@ -154,6 +154,8 @@ class ReportGenerator:
             "join_coverage": metadata["join_coverage"],
             "sample_counts": metadata["sample_counts"],
             "glossary": metadata["glossary"],
+            "routes": result.routes,
+            "ranking": result.ranking,
         }
         report = ReportContent(
             report_id=str(uuid.uuid4()),

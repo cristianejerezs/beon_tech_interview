@@ -6,6 +6,20 @@
 
 ## Summary
 
+### Approved amendment: 2026-10-17
+
+Owner-approved exceptions supersede earlier default-off/explicit-opt-in and universal OIDC
+wording in this plan. Session reuse choices default on where deployment policy permits,
+with visible notice, reversible toggles, a fresh per-session/purpose grant under notice
+`v2-default-on`, and separate explicit shared-copy creation. They are not affirmative
+user consent clicks. Production retention/privacy approval remains mandatory.
+Development sign-in may bypass OIDC only when explicitly enabled in nonproduction with
+an explicit loopback server bind. Its separately namespaced shared identity, warnings,
+sign-out clearing, and production prohibition remain mandatory. All normal/production
+private-resource operations require OIDC and ownership checks.
+Hosted/tracing acknowledgements default on and remain reversible; tracing itself is
+operator-enabled only. No budget, query-validation, or production gate is relaxed.
+
 Build a browser-based, question-driven analytics application for the supplied NYC-area airport datasets. LangChain provides the model integration layer for local Ollama and, when configured, hosted providers. A model interprets an analyst's question into a structured analysis plan; application code validates the plan and compiles it into parameterized, read-only analytical queries. Reports combine verified results with explanatory narrative, tables, and charts. Analysts authenticate individually, retain private report history, and control session-scoped reuse consent. Hosted inference is allowed only with provider-use disclosure and a hard USD 10 per UTC calendar-month cap; LangSmith tracing is off by default.
 
 ## Technical Context

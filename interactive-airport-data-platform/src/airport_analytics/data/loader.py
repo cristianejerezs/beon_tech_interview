@@ -38,6 +38,15 @@ class DatasetLoader:
                 digest.update(block)
         return digest.hexdigest()
 
+    def fingerprint(self) -> tuple[tuple[str, str], ...]:
+        try:
+            return tuple(
+                (dataset_id, self._sha256(self.source_data_dir / dataset.filename))
+                for dataset_id, dataset in DATASETS.items()
+            )
+        except OSError as exc:
+            raise DatasetUnavailableError("Source fingerprint could not be verified.") from exc
+
     @staticmethod
     def _quote_path(path: Path) -> str:
         return str(path).replace("'", "''")
@@ -63,6 +72,14 @@ class DatasetLoader:
             )
 
     def register_views(self, connection: duckdb.DuckDBPyConnection) -> SnapshotManifest:
+        try:
+            return self._register_views(connection)
+        except (duckdb.Error, OSError) as exc:
+            raise DatasetUnavailableError(
+                "The source snapshot could not be loaded or validated."
+            ) from exc
+
+    def _register_views(self, connection: duckdb.DuckDBPyConnection) -> SnapshotManifest:
         missing = [
             dataset.filename
             for dataset in DATASETS.values()

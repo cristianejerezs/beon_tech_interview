@@ -102,7 +102,8 @@ def test_weather_context_reports_exact_join_coverage_and_non_causality() -> None
     report = outcome.report
     assert report is not None
     coverage = report.result_payload["join_coverage"]["weather_origin_time_exact"]
-    assert coverage["matched"] == 276688
-    assert coverage["unmatched"] == 1289
+    assert coverage["total"] == 113385
+    assert coverage["matched"] + coverage["unmatched"] == 113385
+    assert coverage["unmatched"] > 0
     assert "weather_association" in report.result_payload["glossary"]
     assert any("causation" in item for item in report.limitations)

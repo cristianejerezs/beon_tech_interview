@@ -58,6 +58,29 @@ class FakeStructuredModel:
         }
 
 
+def test_adapter_logs_charge_overrun_without_private_content(tmp_path, monkeypatch, caplog):
+    class ExpensiveUsageModel(FakeStructuredModel):
+        def invoke(self, messages):
+            result = super().invoke(messages)
+            result["raw"] = SimpleNamespace(
+                usage_metadata={"input_tokens": 2_000_000, "output_tokens": 2_000_000}
+            )
+            return result
+
+    client, _, storage = _client(tmp_path, _hosted_settings(monkeypatch), ExpensiveUsageModel())
+    state = {}
+    mark_disclosed(state, client.provider)
+    client.generate_plan("private-question", session_state=state)
+    assert "Provider charge exceeded reservation" in caplog.text
+    assert "private-question" not in caplog.text
+    with pytest.raises(BudgetExceededError):
+        client.generate_plan("another private-question", session_state=state)
+    with storage.read() as connection:
+        assert connection.execute("SELECT failure_reason FROM usage_reservations").fetchone()[
+            "failure_reason"
+        ]
+
+
 def _hosted_settings(monkeypatch, *, budget: str = "1.00") -> Settings:
     values = {
         "AIRPORT_MODEL_PROVIDER": "openai",

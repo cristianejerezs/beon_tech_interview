@@ -151,6 +151,19 @@ def test_uncertain_reservation_is_held_until_reconciliation(tmp_path: Path) -> N
     assert service.get_reservation(reservation.reservation_id).status == "reserved"
 
 
+def test_uncertain_acceptance_blocks_paid_calls_even_with_ample_budget(tmp_path):
+    service = ledger(tmp_path / "uncertain-ample.sqlite3")
+    reservation = reserve(service, at=datetime(2026, 1, 31, tzinfo=UTC))
+    service.mark_uncertain(reservation.reservation_id, "provider acceptance unknown")
+    reopened = ledger(tmp_path / "uncertain-ample.sqlite3")
+    with pytest.raises(CostUnboundedError):
+        reserve(reopened, at=datetime(2026, 2, 1, tzinfo=UTC))
+    reopened.release_confirmed_non_acceptance(
+        reservation.reservation_id, provider_confirmed_non_acceptance=True
+    )
+    reserve(reopened, at=datetime(2026, 2, 1, tzinfo=UTC))
+
+
 def test_release_requires_confirmed_non_acceptance(tmp_path: Path) -> None:
     service = ledger(tmp_path / "release.sqlite3", Decimal("0.02"))
     reservation = reserve(service)
