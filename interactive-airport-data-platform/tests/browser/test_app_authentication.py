@@ -84,11 +84,11 @@ def test_development_reuse_opt_in_shared_faq_and_question_selection(monkeypatch,
     app = AppTest.from_function(_development_app).run()
     app.button[0].click().run()
 
-    grant = next(button for button in app.button if button.label == "Enable FAQ examples reuse")
+    grant = next(toggle for toggle in app.toggle if toggle.label == "Enable FAQ examples reuse")
     assert not grant.disabled
-    grant.click().run()
+    assert grant.value is True
     assert not app.error
-    assert any(button.label == "Withdraw FAQ examples consent" for button in app.button)
+    assert all(toggle.value for toggle in app.toggle)
 
     identity = resolve_development_identity(production=False, server_address="127.0.0.1")
     report = make_report(
@@ -109,10 +109,14 @@ def test_development_reuse_opt_in_shared_faq_and_question_selection(monkeypatch,
     assert app.text_area[0].value == report.question
 
     next(
-        button for button in app.button if button.label == "Withdraw FAQ examples consent"
-    ).click().run()
+        toggle for toggle in app.toggle if toggle.label == "Enable FAQ examples reuse"
+    ).set_value(False).run()
     assert not app.error
     assert len(repository.list_shared_artifacts("faq")) == 1
+    app.run()
+    assert not next(
+        toggle for toggle in app.toggle if toggle.label == "Enable FAQ examples reuse"
+    ).value
 
 
 def test_configured_remote_model_available_with_disclosure_in_development(
@@ -137,13 +141,18 @@ def test_configured_remote_model_available_with_disclosure_in_development(
     app.radio[0].set_value("openai").run()
     assert not app.error
     assert any("https://provider.example/v1" in notice.value for notice in app.warning)
-    assert next(button for button in app.button if button.label == "Generate report").disabled
-    next(
-        button
-        for button in app.button
-        if button.label == "I understand and acknowledge hosted processing"
-    ).click().run()
     assert not next(button for button in app.button if button.label == "Generate report").disabled
+    acknowledgement = next(
+        toggle
+        for toggle in app.toggle
+        if toggle.label == "I understand and acknowledge hosted processing"
+    )
+    assert acknowledgement.value is True
+    acknowledgement.set_value(False).run()
+    assert next(button for button in app.button if button.label == "Generate report").disabled
+    app.radio[0].set_value("ollama").run()
+    app.radio[0].set_value("openai").run()
+    assert next(button for button in app.button if button.label == "Generate report").disabled
 
 
 def test_groq_is_explicitly_selectable_in_development(monkeypatch, tmp_path) -> None:
@@ -167,12 +176,6 @@ def test_groq_is_explicitly_selectable_in_development(monkeypatch, tmp_path) -> 
     app.radio[0].set_value("groq").run()
     assert not app.error
     assert any("api.groq.com" in warning.value for warning in app.warning)
-    assert next(button for button in app.button if button.label == "Generate report").disabled
-    next(
-        button
-        for button in app.button
-        if button.label == "I understand and acknowledge hosted processing"
-    ).click().run()
     assert not next(button for button in app.button if button.label == "Generate report").disabled
 
 
@@ -223,3 +226,62 @@ def test_selecting_saved_report_immediately_enables_correct_follow_up(
         generator.generate.call_args.kwargs["follow_up_context"].previous_plan
         == second.analysis_plan
     )
+
+
+@pytest.mark.parametrize(
+    ("reuse_enabled", "production", "retention_approved", "expected"),
+    [
+        (True, False, False, True),
+        (False, False, False, False),
+        (True, True, False, False),
+        (True, True, True, True),
+    ],
+)
+def test_normal_sign_in_defaults_respect_deployment_reuse_policy(
+    monkeypatch, tmp_path, reuse_enabled, production, retention_approved, expected
+) -> None:
+    from airport_analytics.auth import resolve_development_identity
+    from airport_analytics.consent.repository import ConsentRepository
+    from airport_analytics.storage import Storage
+
+    _configure_development(monkeypatch, tmp_path, "127.0.0.1")
+    monkeypatch.setenv("AIRPORT_DEV_SIGN_IN_ENABLED", "false")
+    monkeypatch.setenv("AIRPORT_PRODUCTION", str(production).lower())
+    monkeypatch.setenv("AIRPORT_SHARED_REUSE_ENABLED", str(reuse_enabled).lower())
+    monkeypatch.setenv("AIRPORT_RETENTION_POLICY_APPROVED", str(retention_approved).lower())
+    identity = resolve_development_identity(production=False, server_address="127.0.0.1")
+    monkeypatch.setattr(product_app, "_identity", lambda: identity)
+    monkeypatch.setattr(product_app, "_executor", lambda *args: SimpleNamespace())
+    monkeypatch.setattr(product_app, "LangChainPlanClient", lambda *args, **kwargs: Mock())
+    app = AppTest.from_function(_development_app).run()
+    assert not app.exception
+    assert not app.error
+    assert len(app.toggle) == 2
+    assert all(toggle.value is expected for toggle in app.toggle)
+    assert all(toggle.disabled is not expected for toggle in app.toggle)
+    events = ConsentRepository(Storage(tmp_path / "development.sqlite3"))
+    session_id = app.session_state["airport_session_id"]
+    grant = events.latest_event(identity, session_id, "faq")
+    assert (grant is not None) is expected
+    if grant is not None:
+        assert grant.notice_version == "v2-default-on"
+    app.run()
+    assert not app.exception
+    assert events.latest_event(identity, session_id, "faq") == grant
+
+
+def _tracing_test_app():
+    from airport_analytics.observability.tracing import TracingConfig
+    from app import _tracing_disclosure
+
+    _tracing_disclosure(TracingConfig(enabled=True, maximum_charge_per_trace_usd=None))
+
+
+def test_tracing_acknowledgement_defaults_on_and_can_be_disabled() -> None:
+    app = AppTest.from_function(_tracing_test_app).run()
+    assert not app.exception
+    assert app.toggle[0].value is True
+    assert app.session_state[product_app.TRACING_ACK_KEY] is True
+    app.toggle[0].set_value(False).run()
+    app.run()
+    assert app.session_state[product_app.TRACING_ACK_KEY] is False

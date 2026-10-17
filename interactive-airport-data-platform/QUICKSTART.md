@@ -131,18 +131,24 @@ tunnel, shared host, or public network. For production, set
 Hosted-provider disclosures, budgets, query validation, and reuse controls still apply.
 
 Development sign-in also enables the reuse controls even when
-`AIRPORT_SHARED_REUSE_ENABLED=false`. Each purpose remains off until you explicitly opt in:
+`AIRPORT_SHARED_REUSE_ENABLED=false`. Session choices default to on for both purposes:
 
-1. Open **Optional sharing and reuse controls** and select **Enable FAQ examples reuse**
-   or **Enable System improvement reuse**.
-2. Generate a new report after opting in. Older reports cannot be shared retroactively.
+1. Review the expanded **Optional sharing and reuse controls**. Turn off **Enable FAQ examples reuse**
+   or **Enable System improvement reuse** if you do not want that purpose enabled.
+2. Generate a new report after the session grant is recorded. Older reports cannot be shared retroactively.
 3. Open **Share this report under active reuse consent**, choose a purpose, and select
    **Create shared copy**.
 4. Open **Shared FAQs** to read FAQ copies and their saved scope/results.
    **Use this FAQ question** fills the question input; generating a new answer still uses
    the normal validated-query and model/budget checks. System-improvement copies are
    retained separately and are not displayed in the FAQ list.
-5. Withdraw consent to stop future sharing. Existing shared copies remain.
+5. Turn the corresponding toggle off to withdraw consent and stop future sharing.
+   It stays off across reruns in the session. Existing shared copies remain.
+
+The same session defaults apply with normal OIDC sign-in, but only if deployment reuse is
+enabled and, in production, retention/deletion policy is approved. Disabled deployment
+features are not enabled by session defaults. Grants use notice version `v2-default-on`;
+they record a default selection, not an affirmative user click.
 
 Remote models are also available in development when configured. Keep the local default
 and add these settings to `.env` (real credentials stay local):
@@ -222,8 +228,8 @@ Use the [question-writing guide](QUESTION_GUIDE.md) for supported metrics, compa
 breakdowns, copyable examples, and tips for clarifying or refining a question.
 
 1. Confirm **Model provider** is **Ollama (local)**.
-2. Leave **Optional sharing and reuse controls** off for private analysis, or opt in to
-   a specific purpose if intentionally testing shared reuse.
+2. Review **Optional sharing and reuse controls**. Enabled purposes default to on;
+   turn both off for private-only analysis.
 3. Enter an English question in **Question** and select **Generate report**. For example:
    - "How many distinct destinations did EWR serve in 2013?"
    - "What were the three busiest destinations from LGA in 2013?"
@@ -288,7 +294,7 @@ conservative application allowances, not verified Groq entitlements; lower them 
 No dollar rates are required for confirmed free inference. Tracing, if enabled separately,
 still needs a bounded charge and shares the USD 10 budget.
 
-Restart the app, explicitly select **Groq (hosted, verified free plan)**, and acknowledge
+Restart the app, explicitly select **Groq (hosted, verified free plan)**, and review
 the provider/model/endpoint/data-use notice. The reused `AIRPORT_OPENAI_*` variable names
 refer to the OpenAI-compatible protocol; the key must be from Groq, not OpenAI.
 To default directly to Groq, set `AIRPORT_MODEL_PROVIDER=groq` and
@@ -308,7 +314,12 @@ using [.env.example](.env.example) as a reference. Set both
 `AIRPORT_MODEL_NAME` and `AIRPORT_OPENAI_MODEL_NAME` to the intended hosted model when
 `AIRPORT_MODEL_PROVIDER=openai`.
 
-Select the hosted provider explicitly and acknowledge its notice before submitting a question.
+Select the hosted provider explicitly and review its notice before submitting a question.
+Hosted-processing acknowledgement defaults to on; turn it off to block submission.
+The choice is retained when switching away and back to the same provider/model/terms.
+LangSmith acknowledgement also defaults to on when operator-configured tracing is enabled;
+turning it off blocks submission. These defaults do not enable tracing itself or bypass
+credentials, fees, quotas, or the monthly budget.
 No model gets unrestricted database access: it returns a plan, which the application validates
 and compiles locally. Hosted inference and enabled metered tracing share the deployment-wide
 USD 10 UTC-month cap. Budget exhaustion does not trigger automatic fallback; select Ollama

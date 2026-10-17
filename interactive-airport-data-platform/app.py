@@ -17,6 +17,7 @@ from airport_analytics.analytics.provider_policy import (
     ProviderDescriptor,
     has_disclosed,
     mark_disclosed,
+    revoke_disclosure,
 )
 from airport_analytics.auth import (
     AnalystIdentity,
@@ -101,8 +102,9 @@ def _consent_panel(
     session_id: str,
     service: ConsentService,
 ) -> None:
-    with st.expander("Optional sharing and reuse controls"):
+    with st.expander("Optional sharing and reuse controls", expanded=True):
         st.write(
+            "Session reuse choices default to on where deployment policy permits. "
             "Private analysis works without consent. If enabled, only the question, "
             "answer, metric definition, scope, and up to ten result rows are shared; "
             "your analyst identity is omitted. Withdrawal stops future reuse but does "
@@ -110,44 +112,34 @@ def _consent_panel(
         )
         for purpose, label in PURPOSE_LABELS.items():
             active = service.is_active(identity, session_id, purpose, st.session_state)
-            st.write(f"**{label}:** {'Enabled for this session' if active else 'Off'}")
-            disabled = not service.shared_reuse_enabled
-            if disabled:
+            disabled = not service.shared_reuse_enabled or (
+                service.production and not service.retention_policy_approved
+            )
+            if not service.shared_reuse_enabled:
                 st.caption("Shared reuse is disabled by deployment configuration.")
             if service.production and not service.retention_policy_approved:
                 st.caption(
                     "Production reuse is blocked until retention and deletion "
                     "procedures are approved."
                 )
-            if active:
-                if st.button(
-                    f"Withdraw {label} consent",
-                    key=f"withdraw_{purpose}",
-                    disabled=disabled,
-                ):
-                    service.set_consent(
-                        identity,
-                        session_id,
-                        purpose,
-                        False,
-                        st.session_state,
-                        notice_version="v1",
-                    )
-                    st.rerun()
-            elif st.button(
+            latest = service.events.latest_event(identity, session_id, purpose)
+            enabled = st.toggle(
                 f"Enable {label} reuse",
-                key=f"grant_{purpose}",
+                value=not disabled and (active if latest is not None else True),
+                key=f"reuse_{session_id}_{purpose}",
                 disabled=disabled,
-            ):
+            )
+            enabled = enabled and not disabled
+            if enabled != active:
                 service.set_consent(
                     identity,
                     session_id,
                     purpose,
-                    True,
+                    enabled,
                     st.session_state,
-                    notice_version="v1",
+                    notice_version="v2-default-on",
                 )
-                st.rerun()
+            st.write(f"**{label}:** {'Enabled for this session' if enabled else 'Off'}")
 
 
 def _provider_controls(settings: Settings, budget: BudgetLedger) -> str:
@@ -202,14 +194,22 @@ def _provider_controls(settings: Settings, budget: BudgetLedger) -> str:
             f"access, analyst identifier, or saved report history are sent. "
             f"Product-improvement terms: {provider.product_improvement_terms}."
         )
-        if has_disclosed(st.session_state, provider):
-            st.sidebar.success("Hosted-provider notice acknowledged for this configuration.")
-        elif st.sidebar.button(
+        st.sidebar.caption(
+            "Hosted-processing acknowledgement defaults to on. Turn it off to block submission."
+        )
+        signature = (provider.provider_id, provider.model_id, provider.product_improvement_terms)
+        choices = st.session_state.setdefault("airport_provider_ack_choices", {})
+        acknowledged = st.sidebar.toggle(
             "I understand and acknowledge hosted processing",
-            key=f"ack_provider_{provider.provider_id}_{provider.model_id}",
-        ):
+            value=choices.get(signature, True),
+            key=f"ack_provider_{signature}",
+        )
+        choices[signature] = acknowledged
+        if acknowledged:
             mark_disclosed(st.session_state, provider)
-            st.rerun()
+            st.sidebar.success("Hosted-provider notice acknowledged for this configuration.")
+        else:
+            revoke_disclosure(st.session_state, provider)
     return selected
 
 
@@ -242,15 +242,14 @@ def _tracing_disclosure(tracing: TracingConfig) -> bool:
         "LangSmith tracing is enabled by the deployment operator. Traces may include "
         "your question, analysis-plan context, aggregate results, and generated report text."
     )
-    if tracing_acknowledged(tracing, st.session_state):
-        return True
-    if st.sidebar.button(
+    st.sidebar.caption("Tracing acknowledgement defaults to on; turn it off to block submission.")
+    acknowledged = st.sidebar.toggle(
         "I understand and acknowledge LangSmith tracing",
+        value=st.session_state.get(TRACING_ACK_KEY, True),
         key="ack_langsmith_tracing",
-    ):
-        st.session_state[TRACING_ACK_KEY] = True
-        st.rerun()
-    return False
+    )
+    st.session_state[TRACING_ACK_KEY] = acknowledged
+    return acknowledged
 
 
 def tracing_acknowledged(tracing: TracingConfig, state: Mapping[str, object]) -> bool:
@@ -369,6 +368,7 @@ def main() -> None:
                 st.session_state.clear()
                 st.rerun()
             else:
+                st.session_state.clear()
                 st.logout()
             return
         session_id = st.session_state.setdefault("airport_session_id", uuid.uuid4().hex)

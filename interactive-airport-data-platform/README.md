@@ -33,6 +33,11 @@ retention-policy approval, and analyst usability sessions remain release gates; 
 - Hosted inference requires an explicit provider/model disclosure and a pre-call budget
   reservation. There is no automatic provider fallback. Hosted inference and any enabled,
   metered LangSmith traces share a deployment-wide USD 10 cap per UTC month.
+- Session reuse choices and hosted/tracing acknowledgement toggles default to on in both
+  sign-in modes. These are default selections, not evidence of an affirmative user click.
+  Users can turn them off; reuse withdrawals persist for the session. Provider notices remain
+  visible, and disabling an acknowledgement blocks submission. This intentionally replaces
+  the original default-off session consent UX.
 - LangSmith tracing is off by default. Enabling it requires operator configuration, a bounded
   charge, user-facing disclosure, and analyst acknowledgement; traces may include questions,
   plan context, aggregate results, or report text.

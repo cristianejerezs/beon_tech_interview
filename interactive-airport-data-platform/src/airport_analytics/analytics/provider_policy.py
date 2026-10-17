@@ -47,3 +47,12 @@ def require_disclosed(
 ) -> None:
     if provider.hosted and not has_disclosed(session_state, provider):
         raise DisclosureRequiredError()
+
+
+def revoke_disclosure(
+    session_state: MutableMapping[str, object], provider: ProviderDescriptor
+) -> None:
+    disclosures = session_state.get(DISCLOSURES_KEY, {})
+    if not isinstance(disclosures, dict):
+        raise ValueError("Hosted-provider disclosure state has an invalid shape.")
+    disclosures.pop(provider.provider_id, None)
