@@ -2,6 +2,8 @@
 
 Question-driven, evidence-grounded analytics for the supplied historical NYC-area airport data.
 
+For first-time setup and product usage, follow the [quickstart guide](QUICKSTART.md).
+
 ## Status
 
 The Python application, validated query pipeline, report generation, private history, consent

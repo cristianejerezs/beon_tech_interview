@@ -16,6 +16,8 @@ dist/
 .coverage
 .env*
 !.env.example
+interactive-airport-data-platform/.streamlit/secrets.toml
+interactive-airport-data-platform/var/
 
 # Jupyter
 .ipynb_checkpoints/
