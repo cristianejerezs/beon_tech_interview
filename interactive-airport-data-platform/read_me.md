@@ -114,7 +114,7 @@ worksheet, analyst protocol, and partial accessibility review are not completed 
 - [Draft: automatic visual reporting](./specs/003-visual-reporting/spec.md)
 
 The two extension drafts await owner review before implementation. Their delivery order is
-exploration, visual reporting, then the eight shared end-to-end acceptance scenarios defined
+exploration, visual reporting, then the nine shared end-to-end acceptance scenarios defined
 in the exploration specification. Draft quality checks are not implementation or release evidence.
 
 ## Implementation token-usage record
