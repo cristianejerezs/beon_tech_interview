@@ -50,6 +50,7 @@ def test_hosted_provider_requires_credentials(monkeypatch) -> None:
 
 def test_paid_hosted_provider_requires_rates_and_extra_fee_bound(monkeypatch) -> None:
     monkeypatch.setenv("AIRPORT_MODEL_PROVIDER", "openai")
+    monkeypatch.setenv("AIRPORT_HOSTED_FREE_PLAN", "false")
     monkeypatch.setenv("AIRPORT_OPENAI_API_KEY", "test-only")
     monkeypatch.setenv("AIRPORT_MODEL_NAME", "gpt-4o-mini")
     monkeypatch.delenv("AIRPORT_HOSTED_INPUT_USD_PER_MILLION", raising=False)

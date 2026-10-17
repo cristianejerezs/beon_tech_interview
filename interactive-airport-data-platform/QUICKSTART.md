@@ -229,6 +229,8 @@ Leave the terminal running. Stop the app with `Ctrl+C`.
    coverage, and limitations. A clarification or unsupported-data response is not a report.
 5. To refine a displayed report, check **Refine the currently displayed report's scope**,
    enter a follow-up such as "Only flights from EWR", and generate again. Verify the new scope.
+   This control is disabled until a report is generated successfully or opened from history.
+   The refinement-target caption identifies which saved report the follow-up will use.
 6. Use **Download result table (CSV)** or **Download complete report (PDF)**.
 7. Use **Open one of your saved reports** to revisit private history. Only your ten newest
    private reports remain. **Delete private report** removes that private copy.
@@ -323,6 +325,9 @@ are documented; do not enable approval flags merely to bypass this gate.
 | Sign-in fails | Check Authlib installation, `[auth]`, issuer/subject claims, and exact redirect URL registration. |
 | Development sign-in is blocked | Set `AIRPORT_PRODUCTION=false` and launch with `--server.address=127.0.0.1`. Do not expose the development server externally. |
 | Model unavailable | Check Ollama is running, `/api/tags` lists the configured model, and the endpoint is correct. There is no automatic fallback. |
+| Provider HTTP 400 or 422 | The provider rejected the request/schema or parameters. Use the current app version; Groq receives a supported output-schema subset while the full schema is validated locally. |
+| Provider HTTP 401/403/404 | Check the API key locally, model permissions, and endpoint/model configuration. Never share the key in logs or chat. |
+| Provider HTTP 429 | Check the provider's request/token limits and wait; the app does not retry automatically. Unknown-acceptance reservations stay held until reconciliation. |
 | Dataset unavailable | Check the working directory, source-data setting, and all five original CSVs. |
 | Hosted submit disabled | Acknowledge provider processing and, if enabled, tracing notices. |
 | Hosted input/cost bound rejected | The operator must review token ceilings, tokenizer support, current rates, and fee bounds. Do not disable validation. |

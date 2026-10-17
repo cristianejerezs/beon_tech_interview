@@ -1,9 +1,12 @@
+import json
 from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 
+import httpx
 import pytest
+from openai import APIStatusError
 
 from airport_analytics.analytics.budget import BudgetLedger
 from airport_analytics.analytics.model_client import LangChainPlanClient
@@ -14,6 +17,7 @@ from airport_analytics.errors import (
     CostUnboundedError,
     DisclosureRequiredError,
     ProviderError,
+    user_safe_message,
 )
 from airport_analytics.storage import Storage
 
@@ -24,6 +28,8 @@ class FakeStructuredModel:
         self.calls = 0
 
     def with_structured_output(self, *args, **kwargs):
+        self.output_schema = args[0]
+        self.output_options = kwargs
         return self
 
     def get_num_tokens_from_messages(self, messages) -> int:
@@ -57,6 +63,7 @@ def _hosted_settings(monkeypatch, *, budget: str = "1.00") -> Settings:
         "AIRPORT_MODEL_PROVIDER": "openai",
         "AIRPORT_OPENAI_API_KEY": "test-only",
         "AIRPORT_MODEL_NAME": "gpt-4o-mini",
+        "AIRPORT_HOSTED_FREE_PLAN": "false",
         "AIRPORT_HOSTED_INPUT_USD_PER_MILLION": "1",
         "AIRPORT_HOSTED_OUTPUT_USD_PER_MILLION": "1",
         "AIRPORT_HOSTED_MAX_EXTRA_FEE_USD_PER_REQUEST": "0",
@@ -175,3 +182,102 @@ def test_groq_input_limit_blocks_dispatch(tmp_path, monkeypatch) -> None:
     with pytest.raises(CostUnboundedError):
         client.generate_plan("How many flights?", session_state=state)
     assert model.calls == 0
+
+
+def test_groq_wire_schema_uses_supported_subset_but_local_validation_remains(
+    tmp_path, monkeypatch
+) -> None:
+    from airport_analytics.analytics.plan_schema import validate_analysis_plan
+    from airport_analytics.errors import InvalidPlanError
+
+    model = FakeStructuredModel()
+    client, _, _ = _client(tmp_path, _groq_settings(monkeypatch), model)
+    assert model.output_options["strict"] is True
+    assert model.output_schema["title"] == "airport_analysis_plan"
+    assert "allOf" not in model.output_schema
+    assert "allOf" in client.schema
+    assert "anyOf" in model.output_schema["properties"]["filters"]["items"]["properties"]["value"]
+    assert "maxItems" not in model.output_schema["properties"]["group_by"]
+    assert "maxItems" in client.schema["properties"]["group_by"]
+    bad = model.invoke([])["parsed"]
+    bad["row_limit"] = 999
+    with pytest.raises(InvalidPlanError):
+        validate_analysis_plan(bad)
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 404, 413, 422, 429, 500])
+def test_provider_status_is_actionable_without_exposing_response_or_credentials(
+    tmp_path, monkeypatch, status
+) -> None:
+    response = httpx.Response(status, request=httpx.Request("POST", "https://provider.example/v1"))
+    failure = APIStatusError(
+        "secret-key private-question private-response", response=response, body={"private": "data"}
+    )
+    model = FakeStructuredModel(failure=failure)
+    client, _, storage = _client(tmp_path, _groq_settings(monkeypatch), model)
+    state = {}
+    mark_disclosed(state, client.provider)
+    with pytest.raises(ProviderError) as error:
+        client.generate_plan("Synthetic test question", session_state=state)
+    message = user_safe_message(error.value)
+    assert f"HTTP {status}" in message
+    assert "secret-key" not in message
+    assert "private" not in message
+    assert model.calls == 1
+    with storage.read() as connection:
+        assert (
+            connection.execute("SELECT status FROM usage_reservations").fetchone()["status"]
+            == "reserved"
+        )
+
+
+def test_real_langchain_adapter_sends_compatible_groq_schema(tmp_path, monkeypatch) -> None:
+    from langchain_openai import ChatOpenAI
+
+    settings = _groq_settings(monkeypatch)
+    payloads = []
+
+    def provider_response(request: httpx.Request) -> httpx.Response:
+        payloads.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "synthetic-response",
+                "object": "chat.completion",
+                "created": 0,
+                "model": settings.model_name,
+                "choices": [
+                    {
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": {
+                            "role": "assistant",
+                            "content": json.dumps(FakeStructuredModel().invoke([])["parsed"]),
+                        },
+                    }
+                ],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 100, "total_tokens": 200},
+            },
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(provider_response)) as http_client:
+        model = ChatOpenAI(
+            model=settings.model_name,
+            api_key="test-only",
+            base_url=settings.openai_base_url,
+            max_tokens=settings.max_output_tokens,
+            reasoning_effort="low",
+            max_retries=0,
+            http_client=http_client,
+        )
+        client, _, _ = _client(tmp_path, settings, model)
+        state = {}
+        mark_disclosed(state, client.provider)
+        result = client.generate_plan("Synthetic question", session_state=state)
+    assert result.plan.status == "unsupported"
+    assert len(payloads) == 1
+    wire_schema = payloads[0]["response_format"]["json_schema"]
+    assert wire_schema["name"] == "airport_analysis_plan"
+    assert wire_schema["strict"] is True
+    assert "allOf" not in wire_schema["schema"]
+    assert payloads[0]["reasoning_effort"] == "low"

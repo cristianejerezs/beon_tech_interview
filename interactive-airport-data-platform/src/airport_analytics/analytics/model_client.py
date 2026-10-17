@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import Any
 
+import httpx
 import tiktoken
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
+from openai import APIConnectionError, APIStatusError, APITimeoutError
 
 from airport_analytics.analytics.budget import BudgetLedger, BudgetReservation
 from airport_analytics.analytics.plan_schema import (
@@ -27,10 +30,54 @@ from airport_analytics.data.catalog import DIMENSIONS, FIELDS, METRICS
 from airport_analytics.errors import (
     CostUnboundedError,
     InvalidPlanError,
+    ProviderConnectionError,
     ProviderError,
+    ProviderRequestError,
+    ProviderTimeoutError,
 )
 from airport_analytics.models import AnalysisPlan, ProviderUsage
 from airport_analytics.observability.tracing import TracingConfig
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _groq_output_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Project only provider-supported shape constraints; retain full local validation."""
+    allowed = {
+        "title",
+        "description",
+        "type",
+        "enum",
+        "properties",
+        "required",
+        "additionalProperties",
+        "items",
+        "anyOf",
+    }
+    result: dict[str, Any] = {}
+    for key, value in schema.items():
+        if key == "properties":
+            result[key] = {name: _groq_output_schema(item) for name, item in value.items()}
+        elif key in {"anyOf", "oneOf"}:
+            result["anyOf"] = [_groq_output_schema(item) for item in value]
+        elif key == "items":
+            result[key] = _groq_output_schema(value)
+        elif key in allowed:
+            result[key] = value
+    return result
+
+
+def _safe_provider_error(error: Exception) -> ProviderError:
+    if isinstance(error, (APITimeoutError, httpx.TimeoutException, TimeoutError)):
+        return ProviderTimeoutError()
+    if isinstance(error, (APIConnectionError, httpx.ConnectError, ConnectionError)):
+        return ProviderConnectionError()
+    status = getattr(error, "status_code", None)
+    if isinstance(error, APIStatusError):
+        status = error.status_code
+    if isinstance(status, int) and 400 <= status <= 599:
+        return ProviderRequestError(status)
+    return ProviderError()
 
 
 @dataclass(frozen=True)
@@ -139,10 +186,14 @@ class LangChainPlanClient:
         )
         self.chat_model = model or _build_chat_model(settings)
         self.schema = _load_schema(str(SCHEMA_PATH.resolve()))
+        output_options: dict[str, Any] = {"method": "json_schema", "include_raw": True}
+        output_schema = self.schema
+        if settings.model_provider == "groq":
+            output_schema = _groq_output_schema(self.schema)
+            output_schema["title"] = "airport_analysis_plan"
+            output_options["strict"] = True
         self.structured_model = self.chat_model.with_structured_output(
-            self.schema,
-            method="json_schema",
-            include_raw=True,
+            output_schema, **output_options
         )
         self._schema_json = json.dumps(self.schema, separators=(",", ":"))
         self._catalog_json = _catalog_context()
@@ -292,10 +343,13 @@ class LangChainPlanClient:
                     trace_reservation.reservation_id,
                     actual_usd=trace_reservation.reserved_usd,
                 )
-            raise ProviderError(
-                "The model call failed; its reservation remains held unless "
-                "non-acceptance is confirmed."
-            ) from exc
+            safe_error = _safe_provider_error(exc)
+            LOGGER.warning(
+                "Model call failed: provider=%s category=%s",
+                self.settings.model_provider,
+                safe_error.code,
+            )
+            raise safe_error from exc
 
         parsed, raw, parsing_error = self._response_parts(response)
         usage = self._usage(raw)

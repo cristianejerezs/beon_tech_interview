@@ -287,7 +287,7 @@ def _render_report(
     if col_delete.button("Delete private report", key=f"delete_{report.report_id}"):
         reports.delete_report(identity, report.report_id)
         st.session_state["active_report_id"] = None
-        st.session_state["selected_history_report"] = NO_REPORT
+        st.session_state["reset_history_selection"] = True
         st.rerun()
 
     active_purposes = [
@@ -398,8 +398,28 @@ def main() -> None:
             for report in history
         }
         history_options = [NO_REPORT, *labels]
+        if st.session_state.pop("reset_history_selection", False):
+            st.session_state["selected_history_report"] = NO_REPORT
         if st.session_state.get("selected_history_report") not in history_options:
             st.session_state["selected_history_report"] = NO_REPORT
+
+        st.subheader("Private report history")
+        selected_history = st.selectbox(
+            "Open one of your saved reports",
+            history_options,
+            format_func=lambda report_id: (
+                report_id if report_id == NO_REPORT else _report_label(report_id, labels)
+            ),
+            key="selected_history_report",
+        )
+        current_report_id = (
+            selected_history
+            if selected_history != NO_REPORT
+            else st.session_state.get("active_report_id")
+        )
+        current_report = (
+            reports.get_report(identity, current_report_id) if current_report_id in labels else None
+        )
 
         executor = _executor(str(settings.source_data_dir), settings.query_timeout_seconds)
         tracing = TracingConfig.from_env()
@@ -425,10 +445,13 @@ def main() -> None:
                 "The question is processed by that configured local runtime."
             )
 
-        current_report_id = st.session_state.get("active_report_id")
-        current_report = (
-            reports.get_report(identity, current_report_id) if current_report_id in labels else None
-        )
+        if current_report is None:
+            st.caption(
+                "Refinement becomes available after generating a successful report "
+                "or opening one from private history."
+            )
+        else:
+            st.caption(f"Refinement target: {current_report.question}")
         with st.form("question_form", clear_on_submit=True):
             question = st.text_area(
                 "Question",
@@ -442,6 +465,7 @@ def main() -> None:
             refine = st.checkbox(
                 "Refine the currently displayed report's scope",
                 disabled=current_report is None,
+                help="Check this, enter a follow-up in Question, then select Generate report.",
             )
             submitted = st.form_submit_button(
                 "Generate report",
@@ -450,7 +474,7 @@ def main() -> None:
             )
         if submitted:
             st.session_state["active_report_id"] = None
-            st.session_state["selected_history_report"] = NO_REPORT
+            st.session_state["reset_history_selection"] = True
             try:
                 context = (
                     FollowUpContext(
@@ -480,21 +504,12 @@ def main() -> None:
             except Exception as exc:
                 _safe_error(exc)
 
-        st.subheader("Private report history")
-        selected_history = st.selectbox(
-            "Open one of your saved reports",
-            history_options,
-            format_func=lambda report_id: (
-                report_id if report_id == NO_REPORT else _report_label(report_id, labels)
-            ),
-            key="selected_history_report",
-        )
         active_report_id = (
-            selected_history
-            if selected_history != NO_REPORT
+            st.session_state.get("selected_history_report")
+            if st.session_state.get("selected_history_report") != NO_REPORT
             else st.session_state.get("active_report_id")
         )
-        if active_report_id in labels:
+        if not submitted and active_report_id in labels:
             try:
                 _render_report(identity, active_report_id, reports, consent, session_id)
             except Exception as exc:

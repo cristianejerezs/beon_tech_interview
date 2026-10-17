@@ -174,3 +174,52 @@ def test_groq_is_explicitly_selectable_in_development(monkeypatch, tmp_path) -> 
         if button.label == "I understand and acknowledge hosted processing"
     ).click().run()
     assert not next(button for button in app.button if button.label == "Generate report").disabled
+
+
+def test_selecting_saved_report_immediately_enables_correct_follow_up(
+    monkeypatch, tmp_path
+) -> None:
+    from airport_analytics.auth import resolve_development_identity
+    from airport_analytics.history.repository import ReportRepository
+    from airport_analytics.storage import Storage
+    from tests.factories import make_report
+
+    _configure_development(monkeypatch, tmp_path, "127.0.0.1")
+    monkeypatch.setattr(product_app, "_executor", lambda *args: SimpleNamespace())
+    monkeypatch.setattr(product_app, "LangChainPlanClient", lambda *args, **kwargs: Mock())
+    monkeypatch.setattr(product_app, "render_report", lambda *args: None)
+    identity = resolve_development_identity(production=False, server_address="127.0.0.1")
+    repository = ReportRepository(Storage(tmp_path / "development.sqlite3"))
+    first = make_report("first", identity.analyst_id, "past-session")
+    second = make_report("second", identity.analyst_id, "past-session")
+    repository.save_report(first, identity)
+    repository.save_report(second, identity)
+    app = AppTest.from_function(_development_app).run()
+    app.button[0].click().run()
+    assert app.checkbox[0].disabled
+    history = next(
+        select for select in app.selectbox if select.label == "Open one of your saved reports"
+    )
+    history.set_value(first.report_id).run()
+    assert not app.checkbox[0].disabled
+    next(
+        select for select in app.selectbox if select.label == "Open one of your saved reports"
+    ).set_value(second.report_id).run()
+    assert not app.checkbox[0].disabled
+    generator = Mock()
+    generator.generate.return_value = SimpleNamespace(
+        status="needs_clarification", report=None, message="Which airport?"
+    )
+    monkeypatch.setattr(product_app, "ReportGenerator", lambda *args: generator)
+    app.checkbox[0].check()
+    app.text_area[0].input("Only EWR")
+    next(button for button in app.button if button.label == "Generate report").click().run()
+    assert not app.error
+    assert (
+        generator.generate.call_args.kwargs["follow_up_context"].previous_question
+        == second.question
+    )
+    assert (
+        generator.generate.call_args.kwargs["follow_up_context"].previous_plan
+        == second.analysis_plan
+    )

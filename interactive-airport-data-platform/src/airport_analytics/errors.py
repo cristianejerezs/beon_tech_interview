@@ -32,6 +32,46 @@ class ProviderError(PlatformError):
     user_message = "The configured model provider is unavailable or returned an invalid response."
 
 
+class ProviderRequestError(ProviderError):
+    code = "provider_request_error"
+
+    def __init__(self, status_code: int) -> None:
+        guidance = {
+            400: "The provider rejected the request format or output schema.",
+            401: "The provider rejected the API key. Check the key in your local configuration.",
+            403: "The provider denied access. Check your account and model permissions.",
+            404: (
+                "The provider endpoint or model was not found. Check the configured URL and model."
+            ),
+            413: "The provider rejected the request size. Reduce the question or active context.",
+            422: "The provider could not process the request format or model parameters.",
+            429: "The provider rate or token quota was reached. Check account limits and wait.",
+        }
+        self.user_message = (
+            f"Model provider HTTP {status_code}: "
+            + guidance.get(status_code, "The provider service failed. Check its service status.")
+            + " No automatic retry or provider switch was performed."
+        )
+        super().__init__(self.user_message)
+
+
+class ProviderTimeoutError(ProviderError):
+    code = "provider_timeout"
+    user_message = (
+        "The model provider timed out. Check service availability "
+        "and the configured model timeout. "
+        "Hosted acceptance is unknown; its budget reservation remains held. No automatic retry."
+    )
+
+
+class ProviderConnectionError(ProviderError):
+    code = "provider_connection_error"
+    user_message = (
+        "Could not connect to the configured model endpoint. Check the service, URL, and network. "
+        "No automatic retry or provider switch was performed."
+    )
+
+
 class BudgetExceededError(PlatformError):
     code = "budget_exhausted"
     user_message = "The hosted-model budget or provider quota is exhausted."

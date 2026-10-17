@@ -9,10 +9,12 @@ description = "Question-driven analytics for historical NYC-area airport data."
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "duckdb>=1.2,<2",
+    "httpx>=0.27,<1",
     "jsonschema>=4.22,<5",
     "langchain-core>=0.3.33,<2",
     "langchain-ollama>=0.3,<2",
     "langchain-openai>=0.3,<2",
+    "openai>=1.58,<3",
     "plotly>=5.24,<7",
     "pydantic>=2.9,<3",
     "python-dotenv>=1.0,<2",
