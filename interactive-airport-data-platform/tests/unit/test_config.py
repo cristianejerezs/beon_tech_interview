@@ -15,7 +15,9 @@ def test_development_sign_in_defaults_off_and_rejects_production(monkeypatch) ->
     monkeypatch.delenv("AIRPORT_DEV_SIGN_IN_ENABLED", raising=False)
     assert not Settings.from_env(load_file=False).development_sign_in
     monkeypatch.setenv("AIRPORT_DEV_SIGN_IN_ENABLED", "true")
-    assert Settings.from_env(load_file=False).development_sign_in
+    settings = Settings.from_env(load_file=False)
+    assert settings.development_sign_in
+    assert settings.shared_reuse_enabled
     monkeypatch.setenv("AIRPORT_PRODUCTION", "true")
     with pytest.raises(ValueError, match="Development sign-in is prohibited"):
         Settings.from_env(load_file=False)

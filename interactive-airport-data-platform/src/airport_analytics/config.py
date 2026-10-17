@@ -144,7 +144,7 @@ class Settings:
             source_data_dir=Path(os.getenv("AIRPORT_SOURCE_DATA_DIR", "source_data")),
             query_timeout_seconds=_int_env("AIRPORT_QUERY_TIMEOUT_SECONDS", 30),
             model_timeout_seconds=_int_env("AIRPORT_MODEL_TIMEOUT_SECONDS", 60),
-            shared_reuse_enabled=_bool_env("AIRPORT_SHARED_REUSE_ENABLED"),
+            shared_reuse_enabled=(_bool_env("AIRPORT_SHARED_REUSE_ENABLED") or development_sign_in),
             production=production,
             retention_policy_approved=_bool_env("AIRPORT_RETENTION_POLICY_APPROVED"),
             development_sign_in=development_sign_in,

@@ -154,6 +154,12 @@ def _provider_controls(settings: Settings, budget: BudgetLedger) -> str:
     ).strip()
     if settings.openai_api_key and hosted_model:
         choices.append("openai")
+    elif settings.development_sign_in:
+        st.sidebar.caption(
+            "Remote models are available after configuring AIRPORT_OPENAI_API_KEY and "
+            "AIRPORT_OPENAI_MODEL_NAME in the server environment or .env. "
+            "Paid rates/fee bounds or verified free-plan quotas are still required."
+        )
     current = st.session_state.get("selected_model_provider", settings.model_provider)
     if current not in choices:
         current = settings.model_provider if settings.model_provider in choices else "ollama"
@@ -180,7 +186,10 @@ def _provider_controls(settings: Settings, budget: BudgetLedger) -> str:
         )
         st.sidebar.warning(
             f"Hosted request notice: your question and the minimal plan schema/catalog "
-            f"will be sent to OpenAI ({provider.model_id}). No source rows, database "
+            f"will be sent to the configured OpenAI-compatible service "
+            f"({provider.model_id}) at "
+            f"{settings.openai_base_url or 'https://api.openai.com/v1'}. "
+            f"No source rows, database "
             f"access, analyst identifier, or saved report history are sent. "
             f"Product-improvement terms: {provider.product_improvement_terms}."
         )
@@ -193,6 +202,28 @@ def _provider_controls(settings: Settings, budget: BudgetLedger) -> str:
             mark_disclosed(st.session_state, provider)
             st.rerun()
     return selected
+
+
+def _faq_panel(reports: ReportRepository) -> None:
+    with st.expander("Shared FAQs"):
+        st.caption(
+            "These are separately retained, consented shared answers, not your private history. "
+            "Their scope and historical data may differ from your current question."
+        )
+        artifacts = reports.list_shared_artifacts("faq")
+        if not artifacts:
+            st.info(
+                "No shared FAQs yet. Opt into FAQ reuse, generate a new report, "
+                "and select Create shared copy to add one."
+            )
+        for artifact in artifacts:
+            st.write(artifact.content["question"])
+            st.write(artifact.content["answer"])
+            st.json(artifact.content["definitions"])
+            st.json(artifact.content["scope"])
+            st.dataframe(artifact.content["summary_rows"], hide_index=True)
+            if st.button("Use this FAQ question", key=f"faq_{artifact.artifact_id}"):
+                st.session_state["airport_question"] = artifact.content["question"]
 
 
 def _tracing_disclosure(tracing: TracingConfig) -> bool:
@@ -349,6 +380,7 @@ def main() -> None:
             free_monthly_token_limit=settings.free_monthly_token_limit,
         )
         _consent_panel(identity, session_id, consent)
+        _faq_panel(reports)
         selected_provider = _provider_controls(settings, budget)
 
         history = reports.list_reports(identity)
@@ -391,6 +423,7 @@ def main() -> None:
         with st.form("question_form", clear_on_submit=True):
             question = st.text_area(
                 "Question",
+                key="airport_question",
                 max_chars=2000,
                 help=(
                     "Ask about connectivity, delays, airlines, or aircraft in the "

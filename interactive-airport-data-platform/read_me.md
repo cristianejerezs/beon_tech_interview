@@ -49,6 +49,11 @@ withdrawn. Previously reused material remains after withdrawal. Production share
 disabled until retention and deletion periods and procedures, including backup handling, are
 approved by the deployment owner.
 
+Local development sign-in enables reuse controls for testing, but FAQ and system-improvement
+consent still start off and require explicit session opt-in. Consented FAQ copies can be read
+under **Shared FAQs** and their questions reused as new inputs. Remote-model access still
+requires configured credentials, processing disclosure, and budget authorization.
+
 ## Privacy, safety, and budget constraints
 
 - Hosted processing requires disclosure of the provider/model and material data-use terms before

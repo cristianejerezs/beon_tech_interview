@@ -23,6 +23,9 @@ retention-policy approval, and analyst usability sessions remain release gates; 
 - An opt-in development sign-in bypass is available only with explicit loopback server binding
   and production mode disabled. It uses one shared development identity, not real authentication.
   Never expose that server through a proxy or tunnel. See the [quickstart](QUICKSTART.md#option-a-development-sign-in-local-machine-only).
+- Development mode enables consent-controlled reuse testing and shared FAQ browsing. Remote
+  models remain available with server-side credentials/configuration, disclosures, and budget
+  enforcement; no credentials, consent grants, or free quotas are fabricated.
 - Hosted inference requires an explicit provider/model disclosure and a pre-call budget
   reservation. There is no automatic provider fallback. Hosted inference and any enabled,
   metered LangSmith traces share a deployment-wide USD 10 cap per UTC month.

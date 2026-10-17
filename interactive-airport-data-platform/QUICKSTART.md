@@ -130,6 +130,34 @@ tunnel, shared host, or public network. For production, set
 `AIRPORT_DEV_SIGN_IN_ENABLED=false` and `AIRPORT_PRODUCTION=true`.
 Hosted-provider disclosures, budgets, query validation, and reuse controls still apply.
 
+Development sign-in also enables the reuse controls even when
+`AIRPORT_SHARED_REUSE_ENABLED=false`. Each purpose remains off until you explicitly opt in:
+
+1. Open **Optional sharing and reuse controls** and select **Enable FAQ examples reuse**
+   or **Enable System improvement reuse**.
+2. Generate a new report after opting in. Older reports cannot be shared retroactively.
+3. Open **Share this report under active reuse consent**, choose a purpose, and select
+   **Create shared copy**.
+4. Open **Shared FAQs** to read FAQ copies and their saved scope/results.
+   **Use this FAQ question** fills the question input; generating a new answer still uses
+   the normal validated-query and model/budget checks. System-improvement copies are
+   retained separately and are not displayed in the FAQ list.
+5. Withdraw consent to stop future sharing. Existing shared copies remain.
+
+Remote models are also available in development when configured. Keep the local default
+and add these settings to `.env` (real credentials stay local):
+
+```dotenv
+AIRPORT_OPENAI_API_KEY=REPLACE_WITH_YOUR_KEY
+AIRPORT_OPENAI_MODEL_NAME=REPLACE_WITH_YOUR_HOSTED_MODEL
+```
+
+Configure current token rates, fee/FX bounds, and data-use terms, or verified free-plan
+quotas, using the optional hosted-processing section below. Restart the server and explicitly
+select **OpenAI (hosted)** in **Model provider**. `AIRPORT_OPENAI_BASE_URL` may point to an
+OpenAI-compatible service; the disclosure displays the configured endpoint. Credentials
+are not supplied by development mode, and disclosures and the shared USD 10 cap still apply.
+
 ### Option B: normal OIDC sign-in
 
 Keep `AIRPORT_DEV_SIGN_IN_ENABLED=false` and follow the configuration below.
@@ -191,7 +219,8 @@ Leave the terminal running. Stop the app with `Ctrl+C`.
 ## 5. Ask, refine, and export
 
 1. Confirm **Model provider** is **Ollama (local)**.
-2. Leave **Optional sharing and reuse controls** off for private analysis.
+2. Leave **Optional sharing and reuse controls** off for private analysis, or opt in to
+   a specific purpose if intentionally testing shared reuse.
 3. Enter an English question in **Question** and select **Generate report**. For example:
    - "How many distinct destinations did EWR serve in 2013?"
    - "What were the three busiest destinations from LGA in 2013?"
