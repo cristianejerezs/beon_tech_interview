@@ -217,8 +217,8 @@ def test_plan_rejection_guidance_is_safe_and_does_not_echo_arbitrary_details() -
     [
         (None, True),
         ({"start": "2013-01-01", "end": "2013-12-31"}, True),
-        ({"start": "2013-01-01", "end": None}, True),
-        ({"start": None, "end": "2013-12-31"}, True),
+        ({"start": "2013-01-01", "end": None}, False),
+        ({"start": None, "end": "2013-12-31"}, False),
         ({"start": None, "end": None}, False),
         ({}, False),
         ({"start": "2013-01-01"}, False),
@@ -315,11 +315,30 @@ def test_unknown_provider_details_are_not_echoed(unsafe) -> None:
     assert "Rejected parameter:" not in message
 
 
-def test_real_langchain_adapter_sends_compatible_groq_schema(tmp_path, monkeypatch) -> None:
+@pytest.mark.parametrize("plan_kind", ["unsupported", "full_year", "open_ended"])
+def test_real_langchain_adapter_sends_compatible_groq_schema(
+    tmp_path, monkeypatch, plan_kind
+) -> None:
     from langchain_openai import ChatOpenAI
 
     settings = _groq_settings(monkeypatch)
     payloads = []
+    plan = FakeStructuredModel().invoke([])["parsed"]
+    if plan_kind != "unsupported":
+        plan.update(
+            status="ready",
+            intent="aggregate",
+            metric_id="flight_count",
+            filters=[{"field_id": "origin", "operator": "eq", "value": "EWR"}],
+            chart_intent="table",
+            unsupported_reason=None,
+        )
+        if plan_kind == "full_year":
+            plan["time_range"] = {"start": "2013-01-01", "end": "2013-12-31"}
+        else:
+            plan["filters"].append(
+                {"field_id": "flight_date", "operator": "gte", "value": "2013-06-01"}
+            )
 
     def provider_response(request: httpx.Request) -> httpx.Response:
         payloads.append(json.loads(request.content))
@@ -336,7 +355,7 @@ def test_real_langchain_adapter_sends_compatible_groq_schema(tmp_path, monkeypat
                         "finish_reason": "stop",
                         "message": {
                             "role": "assistant",
-                            "content": json.dumps(FakeStructuredModel().invoke([])["parsed"]),
+                            "content": json.dumps(plan),
                         },
                     }
                 ],
@@ -358,10 +377,14 @@ def test_real_langchain_adapter_sends_compatible_groq_schema(tmp_path, monkeypat
         state = {}
         mark_disclosed(state, client.provider)
         result = client.generate_plan("Synthetic question", session_state=state)
-    assert result.plan.status == "unsupported"
+    assert result.plan.model_dump(mode="json") == plan
     assert len(payloads) == 1
     wire_schema = payloads[0]["response_format"]["json_schema"]
     assert wire_schema["name"] == "airport_analysis_plan"
     assert wire_schema["strict"] is True
     assert "allOf" not in wire_schema["schema"]
+    date_schema = wire_schema["schema"]["properties"]["time_range"]
+    assert "anyOf" not in date_schema
+    assert date_schema["properties"]["start"]["type"] == "string"
+    assert date_schema["properties"]["end"]["type"] == "string"
     assert payloads[0]["reasoning_effort"] == "low"

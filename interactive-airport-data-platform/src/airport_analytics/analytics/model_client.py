@@ -202,6 +202,20 @@ class LangChainPlanClient:
         if settings.model_provider == "groq":
             output_schema = _groq_output_schema(self.schema)
             output_schema["title"] = "airport_analysis_plan"
+            # Avoid same-shaped object branches in provider constrained decoding.
+            output_schema["properties"]["time_range"] = {
+                "description": (
+                    "Null if unused; otherwise two ISO dates, including both endpoints. "
+                    "Use flight_date gte/lte filters for open-ended periods."
+                ),
+                "type": ["object", "null"],
+                "additionalProperties": False,
+                "required": ["start", "end"],
+                "properties": {
+                    "start": {"type": "string"},
+                    "end": {"type": "string"},
+                },
+            }
             output_options["strict"] = True
         self.structured_model = self.chat_model.with_structured_output(
             output_schema, **output_options
@@ -244,6 +258,12 @@ class LangChainPlanClient:
             + " Schema: "
             + self._schema_json
         )
+        if self.settings.model_provider == "groq":
+            system += (
+                " Provider output constraint: time_range must be null or have TWO concrete "
+                "ISO dates; no null endpoints. For open-ended periods use a flight_date "
+                "gte or lte filter and time_range=null."
+            )
         human = json.dumps(
             {"question": question, "active_follow_up_context": context},
             ensure_ascii=False,

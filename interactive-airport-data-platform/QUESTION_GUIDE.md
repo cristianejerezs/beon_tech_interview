@@ -137,6 +137,8 @@ answer, such as "Count distinct destinations from JFK in 2013", rather than only
   that already supplies a year. Date ranges must contain at least one date, or be
   `null` when unused. The structured-output schema disallows two null endpoints.
   As a diagnostic, spell out "from 2013-01-01 through 2013-12-31".
+  Groq's wire schema requires both dates when a range is present; open-ended requests
+  use date comparison filters instead. Local validation still accepts one-sided ranges.
 - Provider authentication, connection, rate-limit, and budget errors cannot be fixed
   by better question wording. See [quickstart troubleshooting](QUICKSTART.md).
 - No matching records does not prove there were no real-world flights; check the
