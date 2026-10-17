@@ -6,7 +6,7 @@
 
 ## Content Quality
 
-- [x] No implementation details (languages, frameworks, APIs)
+- [x] No unrequested implementation details; explicitly selected integration/observability constraints are documented because the product owner requested them
 - [x] Focused on user value and business needs
 - [x] Written for non-technical stakeholders
 - [x] All mandatory sections completed
@@ -27,7 +27,7 @@
 - [x] All functional requirements have clear acceptance criteria
 - [x] User scenarios cover primary flows
 - [x] Feature meets measurable outcomes defined in Success Criteria
-- [x] No implementation details leak into specification
+- [x] No unrequested implementation details leak into specification
 
 ## Notes
 
@@ -35,4 +35,6 @@
   question-specific report grounded in available data.
 - Follow-up questions, report explanations, the four supported analytical areas, and ambiguity or
   data-limit handling are included in requirements and acceptance scenarios.
-- Checklist review confirms this specification is ready for `/speckit-clarify` or `/speckit-plan`.
+- LangChain integration, the USD 10 monthly ceiling, and opt-in LangSmith tracing are explicit
+  user decisions; these are deliberate technical constraints rather than accidental leakage.
+- Checklist review confirms the specification and planning artifacts are ready for `/speckit-tasks`.

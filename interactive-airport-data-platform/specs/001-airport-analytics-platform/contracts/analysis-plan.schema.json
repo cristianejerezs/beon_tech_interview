@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analysis-plan.schema.json",
+  "title": "Airport analytics model response",
+  "description": "A non-executable analysis intent. Application code validates identifiers and compiles any query; this object is never SQL.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "intent",
+    "metric_id",
+    "group_by",
+    "filters",
+    "time_range",
+    "sort",
+    "row_limit",
+    "chart_intent",
+    "clarification_question",
+    "unsupported_reason"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["ready", "needs_clarification", "unsupported"]
+    },
+    "intent": {
+      "type": ["string", "null"],
+      "enum": ["aggregate", "compare", "trend", "distribution", "records", null]
+    },
+    "metric_id": {
+      "type": ["string", "null"],
+      "description": "Must match a metric in the application's versioned metric catalog."
+    },
+    "group_by": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Each value must match an allowlisted dimension in the application catalog."
+      },
+      "uniqueItems": true,
+      "maxItems": 4
+    },
+    "filters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field_id", "operator", "value"],
+        "properties": {
+          "field_id": {
+            "type": "string",
+            "description": "Must match an allowlisted filterable field."
+          },
+          "operator": {
+            "type": "string",
+            "enum": ["eq", "neq", "in", "gt", "gte", "lt", "lte", "between"]
+          },
+          "value": {
+            "description": "Scalar or scalar array; validate type and allowed values against field_id.",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" },
+              {
+                "type": "array",
+                "items": {
+                  "type": ["string", "number", "boolean", "null"]
+                },
+                "maxItems": 100
+              }
+            ]
+          }
+        }
+      },
+      "maxItems": 12
+    },
+    "time_range": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": ["string", "null"], "format": "date" },
+        "end": { "type": ["string", "null"], "format": "date" }
+      }
+    },
+    "sort": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["field_id", "direction"],
+      "properties": {
+        "field_id": {
+          "type": "string",
+          "description": "Must match an allowlisted metric or dimension."
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["asc", "desc"]
+        }
+      }
+    },
+    "row_limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 500
+    },
+    "chart_intent": {
+      "type": ["string", "null"],
+      "enum": ["bar", "line", "histogram", "table", "map", null]
+    },
+    "clarification_question": {
+      "type": ["string", "null"],
+      "maxLength": 500
+    },
+    "unsupported_reason": {
+      "type": ["string", "null"],
+      "maxLength": 500
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "ready" } } },
+      "then": {
+        "properties": {
+          "intent": { "type": "string" },
+          "metric_id": { "type": "string" },
+          "clarification_question": { "type": "null" },
+          "unsupported_reason": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "needs_clarification" } },
+              "required": ["status"] },
+      "then": {
+        "properties": {
+          "clarification_question": { "type": "string" },
+          "unsupported_reason": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "unsupported" } },
+              "required": ["status"] },
+      "then": {
+        "properties": {
+          "clarification_question": { "type": "null" },
+          "unsupported_reason": { "type": "string" }
+        }
+      }
+    }
+  ]
+}

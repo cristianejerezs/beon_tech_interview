@@ -19,6 +19,17 @@ from the user."
 - Q: Should an analyst opt in separately for each question and report, or can one setting authorize future questions and reports to be reused? → A: One explicit opt-in per session applies only to questions and reports from that session.
 - Q: Which formats should analysts be able to save or export a generated report in? → A: Both a PDF containing the complete report and CSV files containing the report's tabular results.
 - Q: When should the analyst be asked to opt in to reuse questions and reports from a session? → A: Ask at the start of each session, before the first question; the analyst can decline and continue privately, opt in later, or turn reuse off at any time.
+- Q: If an analyst turns consent off, what should happen to questions and reports already reused? → A: Keep content already reused; stop future reuse.
+- Q: Should an external AI service process the analyst's question and selected data results? → A: Initial decision was local-only; superseded on 2026-10-17 by allowing hosted models under a monthly USD 10 inference-spend cap.
+- Q: How should natural-language report generation work? → A: Use LangChain with local or hosted model integrations; hosted model inference is allowed only under the monthly cap and disclosed provider data-use terms.
+- Q: Is a free-tier hosted model acceptable if the provider may use submitted content to improve its products? → A: Yes, provided the application clearly discloses this before hosted processing.
+- Q: Should the USD 10 monthly hosted-model budget apply to the whole application deployment or separately to each analyst? → A: One shared cap for the whole deployment per UTC calendar month, so total application spend cannot multiply as analysts are added.
+- Q: If the shared monthly budget is exhausted, should an analyst be able to explicitly switch to an already configured local model, or should question answering stop until the next budget period? → A: Stop hosted calls and offer an explicit switch to a configured local model; if none is available, explain that hosted question answering resumes next month.
+- Q: Before a question or result is sent to a hosted provider that may use submitted content to improve its products, should analysts have to explicitly agree, or is a clear disclosure enough? → A: Clear disclosure before the first provider call in each session is enough; processing proceeds unless the analyst explicitly switches to a configured local model.
+- Q: How should analysts sign in so the app can keep report history private to each person? → A: Require sign-in through an organization-configured OIDC identity provider.
+- Q: Which charges should count against the shared USD 10 monthly cap for hosted model use? → A: Count all provider-billed inference and tracing charges, including applicable fees and currency conversion; exclude unrelated hosting costs.
+- Q: If a hosted request times out and it is unclear whether the provider processed or charged it, should the app retry automatically? → A: Retry automatically only when the provider confirms the first request was not accepted.
+- Q: What response-time target, if any, should the first usable report meet for a typical supported question? → A: Set no hard response-time target for the MVP; measure typical latency during model evaluation and revisit a target after trying the chosen model and host.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -50,6 +61,15 @@ the report addresses it, uses relevant data, and explains the metrics and period
 4. **Given** the current source-data cache is available, **When** the analyst asks an answerable
    question, **Then** the report uses that data state and identifies the relevant data coverage
    and quality limitations.
+5. **Given** a hosted model provider is configured for the session, **When** the platform is about
+   to send its first request to that provider, **Then** it has disclosed the provider and whether
+   submitted content may be used to improve the provider's products, offers any configured local
+   alternative, and sends only the minimum required context unless the analyst switches locally.
+6. **Given** hosted model calls are subject to the monthly budget, **When** a request could exceed
+   the remaining USD 10 limit, **Then** the platform blocks it before sending the request.
+7. **Given** the deployment-wide monthly budget is exhausted, **When** the analyst continues
+   exploring, **Then** the platform offers an explicit switch to an available configured local
+   model or explains that hosted question answering will resume next month.
 
 ---
 
@@ -115,12 +135,15 @@ analysis.
 
 1. **Given** multiple analysts have generated reports, **When** an analyst opens report history,
    **Then** only that analyst's ten most recent reports are available.
-2. **Given** a new session begins, **When** the analyst is asked about reuse before submitting a
+2. **Given** an analyst signs in, **When** the application identifies them, **Then** it uses their
+   stable identity-provider issuer and subject to associate report history, not a mutable email
+   address.
+3. **Given** a new session begins, **When** the analyst is asked about reuse before submitting a
    question, **Then** they can decline and continue with private analysis.
-3. **Given** the analyst opts in to reuse during a session and later turns reuse off, **When**
+4. **Given** the analyst opts in to reuse during a session and later turns reuse off, **When**
    subsequent questions and reports are created, **Then** that subsequent content is not reused
    outside the analyst's private history.
-4. **Given** the analyst declines the initial prompt, **When** they opt in later during that same
+5. **Given** the analyst declines the initial prompt, **When** they opt in later during that same
    session, **Then** only questions and reports created while consent is active may be reused.
 
 ---
@@ -144,6 +167,9 @@ asks a focused clarification or explains the data limitation.
 2. **Given** a question requires information not present in the available data, **When** the
    analyst submits it, **Then** the platform identifies the missing information and does not
    fabricate a result.
+3. **Given** the configured model provider is unavailable or the monthly hosted-inference budget
+   is exhausted, **When** the analyst submits a question, **Then** the platform explains that
+   model processing is unavailable and does not silently switch providers or exceed the budget.
 
 ### Edge Cases
 
@@ -160,6 +186,21 @@ asks a focused clarification or explains the data limitation.
   intended measure, population, or scope.
 - A question asks for information absent from the supplied data; the platform explains the
   limitation rather than inventing a result.
+- The configured model provider is unavailable or the hosted-inference budget is exhausted; the
+  platform reports that model processing is unavailable and does not silently switch providers or
+  exceed the budget.
+- A question is about to be sent to a hosted model; the platform has already disclosed which
+  provider receives it and whether the provider may use submitted content to improve its products.
+- After seeing the provider-use disclosure, an analyst may explicitly switch to a configured
+  local model; otherwise hosted processing proceeds under the disclosed terms.
+- A proposed hosted request could exceed the monthly budget, or provider usage cannot be reliably
+  estimated; the application blocks the request rather than risk exceeding the cap.
+- A hosted request times out; the application retries automatically only if the provider confirms
+  the original request was not accepted, and it reserves the retry's maximum charge before sending.
+- The shared monthly budget is exhausted; hosted calls stop, and the analyst may explicitly
+  select an available configured local model. If none is configured, the platform explains that
+  hosted question answering will resume in the next UTC calendar month.
+- LangSmith tracing is not explicitly enabled; no prompts, results, or report data are sent to it.
 - A follow-up changes or contradicts prior context; the platform makes the active scope clear
   instead of silently applying conflicting filters.
 - An analyst has not opted in to reuse of their questions or reports; that content remains in
@@ -170,6 +211,17 @@ asks a focused clarification or explains the data limitation.
   session may be reused.
 - An analyst turns off and later re-enables reuse during a session; only content created while
   consent is active may be reused.
+- An analyst turns consent off after content has already been reused; previously reused content
+  remains in shared materials, while no further content is reused.
+- An analyst submits an empty, whitespace-only, malformed non-text, or more than 2,000-character
+  question; the application rejects it before any model call or hosted-budget reservation.
+- A hosted response is partial or a provider invoice arrives after the UTC month containing the
+  request; usage is conservatively reconciled and charged to the month in which the request was
+  accepted.
+- A provider, model, or material data-use term changes during a session; the updated disclosure
+  appears before the next hosted request.
+- A normal application restart occurs while analysts have saved reports or usage reservations;
+  committed SQLite state remains available, while no higher availability guarantee is implied.
 
 ## Requirements *(mandatory)*
 
@@ -228,6 +280,79 @@ asks a focused clarification or explains the data limitation.
   is active. Each new session MUST require a new opt-in before its content is reused. The analyst
   MUST be able to turn reuse off or back on at any time; content created while consent is off MUST
   remain excluded from shared FAQs and system improvement.
+- **FR-022**: Turning consent off MUST stop future reuse but MUST NOT remove content already reused
+  in shared FAQs or system-improvement materials.
+- **FR-023**: Before an analyst opts in, the consent explanation MUST disclose that previously
+  reused content remains in shared materials if the analyst later turns reuse off.
+- **FR-024**: The platform MUST use LangChain-supported model integrations and MAY use local or
+  hosted models. Across the entire application deployment, hosted model inference MUST use a free
+  plan or have total metered inference charges no greater than USD 10 per UTC calendar month.
+- **FR-025**: The platform MUST enforce the hosted-inference budget before each request, account
+  for concurrent in-flight requests, record usage and estimated or provider-reported charges, and
+  block a request whenever its maximum possible charge would exceed the deployment-wide USD 10
+  limit for the UTC calendar month. The cap applies to hosted model inference and any metered
+  LangSmith tracing, including directly attributable provider-billed fees and taxes and currency-
+  conversion charges; unrelated hosting costs are excluded. Charges are assigned to the UTC
+  calendar month in which the underlying inference or tracing request was accepted, even if the
+  provider invoices them later. Before a paid request, the platform MUST bound cost using the
+  configured input/output token ceilings, current rate card, and applicable fees. The platform MAY
+  retry a timed-out hosted request automatically only when the provider confirms the original
+  request was not accepted, and MUST reserve the retry's maximum charge before sending it. A
+  partial response MUST be reconciled using provider-reported usage or a conservative estimate.
+  If acceptance or cost cannot be determined reliably, the platform MUST fail closed for further
+  paid hosted inference and retain the uncertain request's reservation until reconciled. Free-tier
+  quotas MUST also be respected. When the cap is exhausted, hosted calls MUST stop; the analyst
+  MAY explicitly select an available configured local model, otherwise the platform MUST explain
+  that hosted question answering resumes in the next UTC calendar month. If reconciled provider
+  charges exceed the reserved estimate, the ledger MUST record the actual charge and block further
+  paid hosted calls for that UTC month if the remaining allowance is exhausted; the incident MUST
+  be surfaced to the deployment operator.
+- **FR-026**: The model MUST return a structured analysis plan. Application code MUST validate
+  that plan against its schema and allowlists and compile it into parameterized, read-only
+  analytical queries. The model MUST NOT receive database credentials or unrestricted query
+  execution, and model-generated SQL MUST NOT be executed.
+- **FR-027**: The application MUST minimize information sent to hosted models to the current
+  question, the minimum active structured analysis context needed for a follow-up, and necessary
+  schema/metric context for plan generation; narrative generation MAY receive validated aggregate
+  results and metric definitions. It MUST NOT send raw source records, analyst identifiers,
+  credentials, or saved/private report history.
+- **FR-028**: Before the first hosted model call to each provider in a session, the application
+  MUST disclose that provider and whether its terms allow submitted content to be used for product
+  improvement and MUST offer a switch to a configured local model when available. The disclosure
+  is not a separate opt-in requirement: unless the analyst explicitly switches locally, processing
+  may proceed under the disclosed provider terms. This disclosure MUST be distinct from the
+  platform's consent for FAQ or system-improvement reuse. Before a later hosted call, the
+  application MUST show an updated disclosure if the provider, model, or material data-use terms
+  have changed during the session.
+- **FR-029**: If the configured provider is unavailable, the application MUST report the failure
+  and MUST NOT silently switch to another local or hosted provider. A provider change must be an
+  explicit configuration or analyst action and remain subject to disclosure and budget controls.
+- **FR-030**: LangSmith tracing MUST be disabled by default. It MAY be enabled only through
+  explicit operator configuration and user-facing disclosure that traces may contain questions,
+  schema context, aggregate results, or report text. Any metered tracing charge MUST count toward
+  the USD 10 monthly AI-service cap.
+- **FR-031**: Analysts MUST authenticate through an organization-configured OpenID Connect
+  identity provider before using private report history or other analyst-specific resources. The
+  application MUST identify an analyst by the provider issuer and stable subject, not by mutable
+  email address, and MUST enforce ownership on every private-resource operation.
+- **FR-032**: The platform MUST accept a non-empty plain-text question of at most 2,000 Unicode
+  code points
+  after trimming surrounding whitespace. It MUST reject an empty or oversized question
+  before any model-provider call or hosted-budget reservation.
+- **FR-033**: The MVP user interface MUST be in English. All interactive controls MUST be
+  keyboard-operable, have programmatic labels, provide a visible keyboard-focus indicator, and
+  communicate status and errors without relying on color alone.
+- **FR-034**: The single-host MVP has no availability, high-availability, or concurrency-throughput
+  SLA. Provider and application failures MUST be shown as actionable errors. A normal application
+  process restart MUST preserve committed SQLite report, consent, and model-usage records.
+- **FR-035**: Before production deployment enables shared FAQ or system-improvement reuse, the
+  deployment owner MUST approve and document retention periods and deletion procedures for analyst
+  identity mappings, private reports, consent audit events, shared artifacts, and their backups.
+  If that policy is not approved, production shared reuse MUST remain disabled.
+- **FR-036**: Reports involving reference-data or weather joins MUST disclose matched and unmatched
+  record counts and the matching coverage for the relevant population. There is no universal
+  minimum join-coverage threshold; weather context may be included only after validating the
+  temporal/key matching rule, and MUST be presented as association rather than causation.
 
 ### Key Entities
 
@@ -249,6 +374,9 @@ asks a focused clarification or explains the data limitation.
 - **Content Reuse Consent**: An analyst's explicit, session-scoped authorization to reuse
   questions and reports created while consent is active during that session outside their private
   history for shared FAQs or system improvement.
+- **Model Usage Reservation**: A record reserving the maximum bounded charge for an in-flight
+  hosted model or tracing operation against the deployment-wide UTC calendar-month cap, then
+  reconciling it with provider-reported usage or a conservative estimate.
 
 ## Success Criteria *(mandatory)*
 
@@ -257,7 +385,10 @@ asks a focused clarification or explains the data limitation.
 - **SC-001**: At least 4 of 5 test analysts can submit a clear question answerable from the
   available data and identify the generated report as addressing that question without help.
 - **SC-002**: In acceptance testing, reports for tested questions across all four supported
-  analysis areas agree with independently checked results for the same data and scope.
+  analysis areas agree with independently checked results for the same data and scope. The
+  provider-selection corpus contains 12 fixed supported questions (three per analysis area) with
+  independently recorded expected metrics and scope; a candidate model MUST correctly interpret
+  at least 11 of 12, and every generated numeric result MUST match its independent calculation.
 - **SC-003**: Every tested generated report identifies relevant metric definitions, units where
   applicable, population, and period, and discloses material data limitations.
 - **SC-004**: At least 4 of 5 test analysts can use a follow-up question to refine a report and
@@ -269,6 +400,23 @@ asks a focused clarification or explains the data limitation.
   finding and explain its metric definition and key limitation from its report.
 - **SC-007**: Acceptance testing confirms each analyst can access only their ten most recent
   reports, decline reuse while continuing analysis, and turn reuse off during a session.
+- **SC-008**: Budget tests confirm that concurrent hosted requests and metered tracing cannot
+  authorize more than USD 10 in maximum reserved charges for a UTC calendar month, and that
+  paid requests are blocked when cost cannot be bounded. Tests also confirm retries occur only
+  after provider-confirmed non-acceptance, uncertain reservations remain held until reconciliation,
+  and accepted-month cost attribution is preserved when invoices arrive later.
+- **SC-009**: Acceptance tests confirm provider data-use disclosures appear before hosted
+  processing, remain distinct from application reuse consent, and third-party model tracing is
+  off by default.
+- **SC-010**: Model evaluation records end-to-end response times for a representative set of
+  supported questions on the selected host and provider; these measurements establish a baseline
+  but are not subject to a hard MVP pass/fail threshold.
+- **SC-011**: Restart acceptance testing confirms committed reports, consent events, and budget
+  reservations remain available after a normal application-process restart; no uptime or
+  high-availability target applies to the MVP.
+- **SC-012**: Accessibility acceptance review confirms every analyst-facing interactive control
+  is keyboard-operable, programmatically labelled, visibly focused when navigated by keyboard,
+  and has status/error information that is not conveyed by color alone.
 
 ## Assumptions
 
@@ -280,12 +428,19 @@ asks a focused clarification or explains the data limitation.
   matched reliably to flight records.
 - The four analysis areas are the question-answering scope of the initial experience. New data
   sources, live updates, and additional analytical domains are outside this specification.
+- Weather data may be used as supporting context for delay questions, but weather analysis is not
+  a separate fifth analysis area. Any weather association must disclose data matching limitations
+  and must not be presented as proof of causation.
 - Reports are generated from the user's question and supplied data; the user is not required to
   navigate a fixed dashboard before asking a question.
 - The source data may omit values or reference matches. The platform will disclose those limits
   rather than infer unavailable facts.
 - Metric thresholds and ranking definitions not prescribed by the source data will be stated
   transparently and treated as analysis definitions, not inherent facts.
-- Turning off consent stops future reuse of that session's content. Whether content reused before
-  consent was turned off must also be removed from shared FAQs or improvement materials remains
-  to be decided before implementing content reuse.
+- Turning off consent stops future reuse of that session's content. Content already reused remains
+  in shared FAQs or improvement materials, as stated in FR-022 and disclosed before opt-in.
+- The MVP has no hard question-to-report latency target; evaluation records response-time
+  measurements to inform a later target.
+- There is no universal join-coverage pass threshold; reports disclose the relevant matched and
+  unmatched counts and coverage, and weather context requires a validated matching rule.
+- Production shared reuse is unavailable until the retention/deletion policy in FR-035 is approved.
