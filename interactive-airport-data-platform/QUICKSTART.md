@@ -218,6 +218,9 @@ Leave the terminal running. Stop the app with `Ctrl+C`.
 
 ## 5. Ask, refine, and export
 
+Use the [question-writing guide](QUESTION_GUIDE.md) for supported metrics, compatible
+breakdowns, copyable examples, and tips for clarifying or refining a question.
+
 1. Confirm **Model provider** is **Ollama (local)**.
 2. Leave **Optional sharing and reuse controls** off for private analysis, or opt in to
    a specific purpose if intentionally testing shared reuse.
