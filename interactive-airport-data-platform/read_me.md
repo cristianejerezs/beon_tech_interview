@@ -110,6 +110,12 @@ worksheet, analyst protocol, and partial accessibility review are not completed 
 - [Quickstart and acceptance scenarios](./specs/001-airport-analytics-platform/quickstart.md)
 - [Implementation tasks](./specs/001-airport-analytics-platform/tasks.md)
 - [Feature-quality checklist](./specs/001-airport-analytics-platform/checklists/feature-quality.md)
+- [Draft: natural-language exploration and ten request families](./specs/002-natural-language-exploration/spec.md)
+- [Draft: automatic visual reporting](./specs/003-visual-reporting/spec.md)
+
+The two extension drafts await owner review before implementation. Their delivery order is
+exploration, visual reporting, then the eight shared end-to-end acceptance scenarios defined
+in the exploration specification. Draft quality checks are not implementation or release evidence.
 
 ## Implementation token-usage record
 
