@@ -336,6 +336,7 @@ are documented; do not enable approval flags merely to bypass this gate.
 | Hosted input/cost bound rejected | The operator must review token ceilings, tokenizer support, current rates, and fee bounds. Do not disable validation. |
 | No records or unsupported question | Broaden filters or ask about supported connectivity, delays, airlines, or aircraft metrics. |
 | Browser shows `Unknown request URL: GET /openai/v1` | This is an API base URL, not a web page. Leave the configured base URL unchanged; use the app to send chat-completions requests. |
+| Provider HTTP 400 | This can mean a rejected request/schema or a generated response that failed provider validation. Share only the app's safe `Code` and `Rejected parameter` details when present, never raw response bodies or keys. `json_validate_failed` identifies a generated-output validation failure. Do not change providers or disable validation to bypass it. |
 | Question says "the airport" without naming one | Specify EWR, JFK, or LGA, or provide an active report with that airport filter. The model should request clarification rather than guess. |
 
 The snapshot is historical, not live flight data. Weather comparisons are contextual, not

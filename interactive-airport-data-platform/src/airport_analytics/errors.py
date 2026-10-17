@@ -67,9 +67,18 @@ class ProviderError(PlatformError):
 class ProviderRequestError(ProviderError):
     code = "provider_request_error"
 
-    def __init__(self, status_code: int) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        *,
+        provider_code: object = None,
+        provider_param: object = None,
+    ) -> None:
         guidance = {
-            400: "The provider rejected the request format or output schema.",
+            400: (
+                "The provider rejected the request or could not produce a valid structured "
+                "response. HTTP 400 alone does not identify which."
+            ),
             401: "The provider rejected the API key. Check the key in your local configuration.",
             403: "The provider denied access. Check your account and model permissions.",
             404: (
@@ -79,11 +88,32 @@ class ProviderRequestError(ProviderError):
             422: "The provider could not process the request format or model parameters.",
             429: "The provider rate or token quota was reached. Check account limits and wait.",
         }
-        self.user_message = (
-            f"Model provider HTTP {status_code}: "
-            + guidance.get(status_code, "The provider service failed. Check its service status.")
-            + " No automatic retry or provider switch was performed."
+        self.user_message = f"Model provider HTTP {status_code}: " + guidance.get(
+            status_code, "The provider service failed. Check its service status."
         )
+        safe_codes = {
+            "json_validate_failed": (
+                "The generated response failed the provider's JSON/schema validation."
+            ),
+            "invalid_request_error": "The provider reported an invalid request.",
+            "context_length_exceeded": "The request exceeded the model's context limit.",
+            "model_not_found": "The configured model was not found.",
+        }
+        if isinstance(provider_code, str) and provider_code in safe_codes:
+            self.user_message += f" Code: {provider_code}. {safe_codes[provider_code]}"
+        safe_params = {
+            "response_format",
+            "response_format.json_schema",
+            "response_format.json_schema.schema",
+            "max_tokens",
+            "max_completion_tokens",
+            "reasoning_effort",
+            "messages",
+            "temperature",
+        }
+        if isinstance(provider_param, str) and provider_param in safe_params:
+            self.user_message += f" Rejected parameter: {provider_param}."
+        self.user_message += " No automatic retry or provider switch was performed."
         super().__init__(self.user_message)
 
 

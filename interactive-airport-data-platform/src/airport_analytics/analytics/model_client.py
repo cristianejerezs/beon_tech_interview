@@ -76,7 +76,13 @@ def _safe_provider_error(error: Exception) -> ProviderError:
     if isinstance(error, APIStatusError):
         status = error.status_code
     if isinstance(status, int) and 400 <= status <= 599:
-        return ProviderRequestError(status)
+        body = getattr(error, "body", None)
+        detail = body.get("error", body) if isinstance(body, dict) else None
+        provider_code = detail.get("code") if isinstance(detail, dict) else None
+        provider_param = detail.get("param") if isinstance(detail, dict) else None
+        return ProviderRequestError(
+            status, provider_code=provider_code, provider_param=provider_param
+        )
     return ProviderError()
 
 

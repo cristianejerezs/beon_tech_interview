@@ -281,6 +281,40 @@ def test_provider_status_is_actionable_without_exposing_response_or_credentials(
         )
 
 
+@pytest.mark.parametrize("nested", [False, True])
+def test_provider_400_reports_only_allowlisted_code_and_parameter(nested) -> None:
+    from airport_analytics.analytics.model_client import _safe_provider_error
+
+    detail = {
+        "code": "json_validate_failed",
+        "param": "response_format",
+        "message": "secret-key private-question",
+        "failed_generation": "private-response",
+    }
+    response = httpx.Response(400, request=httpx.Request("POST", "https://provider.example"))
+    failure = APIStatusError(
+        "private-response", response=response, body={"error": detail} if nested else detail
+    )
+    message = user_safe_message(_safe_provider_error(failure))
+    assert "Code: json_validate_failed" in message
+    assert "Rejected parameter: response_format" in message
+    assert "private" not in message
+    assert "secret" not in message
+
+
+@pytest.mark.parametrize("unsafe", ["private-response", {"secret": "private-response"}, None])
+def test_unknown_provider_details_are_not_echoed(unsafe) -> None:
+    from airport_analytics.analytics.model_client import _safe_provider_error
+
+    response = httpx.Response(400, request=httpx.Request("POST", "https://provider.example"))
+    failure = APIStatusError("secret", response=response, body={"code": unsafe, "param": unsafe})
+    message = user_safe_message(_safe_provider_error(failure))
+    assert "private" not in message
+    assert "secret" not in message
+    assert "Code:" not in message
+    assert "Rejected parameter:" not in message
+
+
 def test_real_langchain_adapter_sends_compatible_groq_schema(tmp_path, monkeypatch) -> None:
     from langchain_openai import ChatOpenAI
 
