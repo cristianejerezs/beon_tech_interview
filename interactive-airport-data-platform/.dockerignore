@@ -1,0 +1,15 @@
+# Secrets and local state never enter the image.
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+var/
+reports/
+# Caches and tooling
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+.specify/
+.github/
+docs/
+sql/

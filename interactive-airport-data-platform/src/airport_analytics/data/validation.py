@@ -101,6 +101,20 @@ def build_snapshots(
                 f"Unexpected columns in {dataset.filename}; analytics cannot use this snapshot."
             )
         validate_dataset_structure(connection, dataset.dataset_id, describe)
+        numeric_types = {"FLOAT", "DOUBLE", "REAL", "DECIMAL"}
+        for column, sql_type, *_ in describe:
+            if any(str(sql_type).startswith(kind) for kind in numeric_types):
+                invalid = connection.execute(
+                    f'SELECT 1 FROM {dataset.table_name} WHERE "{column}" IS NOT NULL '
+                    f'AND NOT isfinite("{column}") LIMIT 1'
+                ).fetchone()
+                if invalid:
+                    raise DatasetUnavailableError("Source measurements must be finite numbers.")
+        if (
+            dataset.dataset_id == "planes"
+            and connection.execute("SELECT 1 FROM planes WHERE seats < 0 LIMIT 1").fetchone()
+        ):
+            raise DatasetUnavailableError("Negative aircraft reference seats are invalid data.")
 
         row_count = int(
             connection.execute(f"SELECT COUNT(*) FROM {dataset.table_name}").fetchone()[0]

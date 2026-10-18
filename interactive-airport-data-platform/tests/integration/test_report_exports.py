@@ -5,8 +5,9 @@ import pytest
 from pypdf import PdfReader
 
 from airport_analytics.analytics.plan_schema import validate_analysis_plan
-from airport_analytics.models import ReportContent
+from airport_analytics.models import CompositeReportV2, ReportContent
 from airport_analytics.reports.export import export_report_csv, export_report_pdf
+from tests.unit.test_exploration_results import scalar_report_payload
 
 
 def sample_report() -> ReportContent:
@@ -86,6 +87,44 @@ def test_pdf_contains_complete_report_sections_and_result_data() -> None:
         "snapshot-hash",
     ):
         assert required in text
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_pdf_second_heading_is_the_submitted_question(monkeypatch, version):
+    from reportlab.platypus import Paragraph, SimpleDocTemplate
+
+    report = (
+        sample_report()
+        if version == 1
+        else CompositeReportV2.model_validate(scalar_report_payload())
+    )
+    report.question = "Which destinations have <10 flights & why?"
+    if version == 2:
+        reader = PdfReader(io.BytesIO(export_report_pdf(report)))
+        lines = [line.strip() for line in reader.pages[0].extract_text().splitlines()]
+        assert "Airport" in lines[0]
+        assert lines[1] == report.question
+        top = reader.trailer["/Root"]["/StructTreeRoot"]["/K"]
+        document = (top[0] if isinstance(top, list) else top).get_object()
+        assert document["/S"] == "/Document"
+        roles = [kid.get_object()["/S"] for kid in document["/K"]]
+        assert roles[:2] == ["/H1", "/H2"]
+        return
+    paragraphs = []
+    original = SimpleDocTemplate.build
+
+    def capture(document, story, *args, **kwargs):
+        paragraphs.extend(item for item in story if isinstance(item, Paragraph))
+        return original(document, story, *args, **kwargs)
+
+    monkeypatch.setattr(SimpleDocTemplate, "build", capture)
+    content = export_report_pdf(report)
+
+    assert "Airport" in paragraphs[0].getPlainText()
+    assert paragraphs[1].getPlainText() == report.question
+    assert paragraphs[1].style.parent.name == "Heading2"
+    first_page = PdfReader(io.BytesIO(content)).pages[0].extract_text()
+    assert report.question in first_page
 
 
 @pytest.mark.parametrize("value", [None, "", "2026-01-01"])

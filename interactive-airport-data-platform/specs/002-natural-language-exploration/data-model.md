@@ -1,6 +1,10 @@
 # Domain Model: Natural-Language Exploration V2
 
-Design contract; types described here are not yet implemented. All serialized objects reject unknown properties. IDs and hashes are opaque identifiers, never user-supplied SQL or filesystem paths. UTC timestamps apply to application events only; flight calendar dates retain their recorded meaning.
+Domain contract. Foundational request/interpretation/result/report types are implemented;
+browsing/export-selection, detailed coverage/evaluation types and lifecycle integration remain
+scheduled in their story tasks. All serialized objects reject unknown properties. IDs and hashes
+are opaque identifiers, never user-supplied SQL or filesystem paths. UTC timestamps apply to
+application events only; flight calendar dates retain their recorded meaning.
 
 ## 1. Trust layers and relationships
 
@@ -93,7 +97,7 @@ Semantic validation additionally requires:
 - Scope union requirements: an all-origin combined date is verified only when every selected origin is covered without a gap; per-origin results validate that origin's scope independently. Capacity comparisons share the applicable date set across airlines within each comparison population; never choose each airline's own denominator.
 - Unknown dates and known gaps remain unknown for complete-day denominators. Observed rows do not upgrade their status. A stale/malformed/conflicting declaration emits a safe visible warning and contributes no unsupported verified days.
 
-`CalendarEligibility` stores requested, verified, unknown, observed and eligible counts, inclusive bounds, per-weekday counts, coverage version/hash/status, denominator basis and partial flags. Supporting daily rows are bounded, but counts/means use the complete eligible date set.
+`CalendarEligibility` stores requested, verified, unknown, observed and eligible counts, inclusive bounds, per-weekday counts, coverage version/hash/status, denominator basis and partial flags. Supporting daily rows share one separate 500-row pool per section across all categories/collections, ordered by date then stable category codes under the [evidence-bound table](spec.md#evidence-bound-table); counts/means use the complete eligible date set.
 
 ## 5. AnalyticalResult union
 
@@ -102,7 +106,7 @@ Every variant has `result_version=2`, section identity, interpretation/context r
 | Variant | Additional evidence |
 |---------|---------------------|
 | scalar | Value, numerator/denominator where relevant, supporting route summary when needed |
-| grouped | Typed category/code identities and ordered measures; exact total/selected/omitted groups, ties, sample sizes |
+| grouped | Typed category/code identities and ordered measures; exact total/selected/omitted groups, ties, sample sizes; aggregate groups include scoped_count and missing_count, with sample_size + missing_count = scoped_count |
 | listing | Stable identity columns, exact total, BrowsePage and explicit population kind |
 | period_change | Baseline/comparison scope, values/counts/day exposure, absolute/relative change and unavailable/warning flags |
 | distribution | Variable/unit, anchored width, ordered lower/upper/count bins, missing/known counts and exact reconciliation |

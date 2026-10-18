@@ -76,6 +76,7 @@ class BudgetLedger:
         monthly_cap_usd: Decimal = Decimal("10.00"),
         free_monthly_request_limit: int = 1000,
         free_monthly_token_limit: int = 1_000_000,
+        enforce_free_monthly_quotas: bool = True,
     ) -> None:
         cap = _as_decimal(monthly_cap_usd, "monthly_cap_usd")
         if cap > Decimal("10.00"):
@@ -86,6 +87,7 @@ class BudgetLedger:
         self.monthly_cap_usd = cap
         self.free_monthly_request_limit = free_monthly_request_limit
         self.free_monthly_token_limit = free_monthly_token_limit
+        self.enforce_free_monthly_quotas = enforce_free_monthly_quotas
 
     @staticmethod
     def _from_row(row: Row) -> BudgetReservation:
@@ -136,10 +138,16 @@ class BudgetLedger:
                 "A prior paid request has unresolved acceptance or cost; reconcile it first."
             )
 
-        if free_plan:
+        if free_plan and self.enforce_free_monthly_quotas:
             usage = connection.execute(
                 """
-                SELECT COUNT(*) AS request_count, COALESCE(SUM(reserved_tokens), 0) AS tokens
+                SELECT COUNT(*) AS request_count,
+                       COALESCE(SUM(
+                           CASE WHEN status = 'settled' AND acceptance_uncertain = 0
+                                THEN COALESCE(input_tokens, max_input_tokens)
+                                   + COALESCE(output_tokens, max_output_tokens)
+                                ELSE reserved_tokens END
+                       ), 0) AS tokens
                 FROM usage_reservations
                 WHERE period_start_utc = ? AND free_plan = 1 AND status != 'released'
                 """,
@@ -340,6 +348,7 @@ class BudgetLedger:
         *,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
+        cached_input_tokens: int | None = None,
         provider_fees_usd: Decimal | None = None,
         currency_conversion_usd: Decimal | None = None,
         actual_usd: Decimal | None = None,
@@ -349,6 +358,8 @@ class BudgetLedger:
             raise ValueError("Reported input tokens cannot be negative.")
         if output_tokens is not None and output_tokens < 0:
             raise ValueError("Reported output tokens cannot be negative.")
+        if cached_input_tokens is not None and cached_input_tokens < 0:
+            raise ValueError("Reported cached input tokens cannot be negative.")
         fees = Decimal("0")
         if provider_fees_usd is not None:
             fees += _as_decimal(provider_fees_usd, "provider fees and taxes")
@@ -391,7 +402,7 @@ class BudgetLedger:
             connection.execute(
                 """
                 UPDATE usage_reservations
-                SET actual_usd = ?, input_tokens = ?, output_tokens = ?,
+                SET actual_usd = ?, input_tokens = ?, output_tokens = ?, cached_input_tokens = ?,
                     status = 'settled', acceptance_uncertain = 0, settled_at = ?, failure_reason = ?
                 WHERE reservation_id = ?
                 """,
@@ -399,6 +410,7 @@ class BudgetLedger:
                     str(actual),
                     input_tokens,
                     output_tokens,
+                    cached_input_tokens,
                     settled_time,
                     notice,
                     reservation_id,

@@ -5,13 +5,30 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from airport_analytics.analytics.execution import QueryResult
+from airport_analytics.analytics.execution import QueryResult, SummaryQueryResult
+from airport_analytics.analytics.query_compiler import listing_columns
 from airport_analytics.data.catalog import (
     DIMENSIONS,
+    EXPLORATION_MEASURES,
     METRICS,
     required_joins,
 )
-from airport_analytics.models import AnalysisPlan
+from airport_analytics.models import (
+    AnalysisPlan,
+    BrowsePage,
+    CategoryIdentity,
+    EvidenceField,
+    EvidenceFormat,
+    EvidenceScope,
+    EvidenceSelection,
+    GroupedResult,
+    GroupEvidence,
+    ListingResult,
+    NumericEvidence,
+    ResolvedInterpretation,
+    ScalarResult,
+    TimeRange,
+)
 
 GLOSSARY: dict[str, str] = {
     "average": (
@@ -32,6 +49,255 @@ GLOSSARY: dict[str, str] = {
         "they do not establish that weather caused a delay."
     ),
 }
+
+
+def build_listing_evidence(
+    interpretation: ResolvedInterpretation,
+    page: BrowsePage,
+    *,
+    report_id: str,
+) -> ListingResult:
+    fields = [
+        EvidenceField(
+            field_id=column,
+            label=column.replace("_", " "),
+            role="identity"
+            if column == page.identity_column
+            else (
+                "numeric"
+                if column in {"departure_delay", "arrival_delay", "distance", "connection_count"}
+                else "date"
+                if column == "flight_date"
+                else "category"
+            ),
+            unit="connected airports"
+            if column == "connection_count"
+            else EXPLORATION_MEASURES[column].unit
+            if column in EXPLORATION_MEASURES
+            else None,
+            unit_provenance="application_catalog"
+            if column in EXPLORATION_MEASURES or column == "connection_count"
+            else None,
+        )
+        for column in listing_columns(interpretation)
+    ]
+    return ListingResult(
+        result_version=2,
+        evidence_version=2,
+        report_id=report_id,
+        section_id=interpretation.section_id,
+        snapshot_id=interpretation.snapshot_id,
+        context_id=interpretation.context_id,
+        definition=interpretation.definition,
+        grain=interpretation.grain,
+        scope=EvidenceScope(
+            filters=interpretation.filters,
+            requested_period=interpretation.date_scope,
+            observed_period=None,
+            origins=[],
+            coverage_status="unknown",
+            denominator_basis="not_applicable",
+            requested_days=None,
+            verified_days=0,
+            unknown_days=None,
+            observed_days=0,
+            eligible_days=None,
+        ),
+        fields=fields,
+        order=interpretation.order,
+        missingness={},
+        selection=EvidenceSelection(
+            available=page.total_rows,
+            selected=len(page.rows),
+            omitted=page.total_rows - len(page.rows),
+            cutoff_tie=False,
+        ),
+        format=EvidenceFormat(locale="en", computed_places=2, rounding=None),
+        limitations=[
+            "Saved rows are a bounded preview, not the full population.",
+            "Continuation requires the identical source snapshot and analytical context.",
+            "Unmatched references preserve observed codes; null is not observed zero.",
+            *(
+                [
+                    "Connections count distinct other airport codes in either flight direction.",
+                    "All catalogue airports are included; zero means no recorded connection "
+                    "in this dataset, not no real-world service.",
+                    "Self-connections and missing endpoints are excluded; unmatched neighbour "
+                    "codes count without adding extra catalogue rows.",
+                ]
+                if interpretation.population == "airport_connections"
+                else []
+            ),
+        ],
+        daily_support=[],
+        route_support=[],
+        kind="listing",
+        population=interpretation.population,
+        total_rows=page.total_rows,
+        rows=page.rows,
+        identity_columns=[page.identity_column],
+        browse_page=page,
+    )
+
+
+def build_summary_evidence(
+    interpretation: ResolvedInterpretation,
+    result: SummaryQueryResult,
+    *,
+    report_id: str,
+) -> ScalarResult | GroupedResult:
+    scope = result.scope
+    total = int(scope["filtered_flights"])
+    known = int(scope["known_measure"])
+    available_routes = int(scope["available_routes"])
+    missingness = {
+        "filtered_flights": total,
+        "known_measure": known,
+        "missing_measure": total - known,
+        **{
+            key: int(scope[key])
+            for key in [
+                "airline_reference_unmatched",
+                "plane_reference_unmatched",
+                "weather_reference_unmatched",
+                "destination_reference_unmatched",
+            ]
+        },
+    }
+    if interpretation.measure_ids == ["distinct_destination_count"]:
+        missingness.update(
+            available_routes=available_routes,
+            selected_routes=len(result.routes),
+            omitted_routes=available_routes - len(result.routes),
+        )
+    fields = [
+        EvidenceField(
+            field_id=dimension,
+            label=dimension.replace("_", " "),
+            role="category",
+            unit=None,
+            unit_provenance=None,
+        )
+        for dimension in interpretation.grouping
+    ]
+    measure = interpretation.measure_ids[0]
+    fields.append(
+        EvidenceField(
+            field_id=measure,
+            label=measure.replace("_", " "),
+            role="numeric",
+            unit=interpretation.definition.unit,
+            unit_provenance="application_catalog",
+        )
+    )
+    observed_period = (
+        TimeRange(start=scope["period_start"], end=scope["period_end"])
+        if scope["period_start"] is not None
+        else None
+    )
+    limits = [
+        "Historical observed records only; recorded bounds do not establish calendar completeness.",
+        "Missing reference names preserve code identity; missing values are not observed zero.",
+    ]
+    if interpretation.family in {"ranking", "category_comparison"}:
+        limits.append("Differences are descriptive, not a statistical significance test.")
+    if measure == "weather_context_departure_delay":
+        limits.append("Weather context is flight-weighted association, not causation.")
+    available = int(result.rows[0]["available_groups"]) if result.rows else 0
+    values = [row["metric_value"] for row in result.rows]
+    if interpretation.family == "ranking" and result.rows:
+        missingness.update(
+            top_equal_value_groups=int(result.rows[0]["equal_value_groups"]),
+            selected_top_equal_value_groups=values.count(values[0]),
+            omitted_top_equal_value_groups=(
+                int(result.rows[0]["equal_value_groups"]) - values.count(values[0])
+            ),
+        )
+    cutoff = bool(
+        result.rows
+        and available > len(result.rows)
+        and int(result.rows[-1]["equal_value_groups"]) > values.count(values[-1])
+        and interpretation.order
+        and interpretation.order[0].field_id == measure
+    )
+    common = dict(
+        result_version=2,
+        evidence_version=2,
+        report_id=report_id,
+        section_id=interpretation.section_id,
+        snapshot_id=interpretation.snapshot_id,
+        context_id=interpretation.context_id,
+        definition=interpretation.definition,
+        grain=interpretation.grain,
+        scope=EvidenceScope(
+            filters=interpretation.filters,
+            requested_period=interpretation.date_scope,
+            observed_period=observed_period,
+            origins=scope["origin_codes"] or [],
+            coverage_status="unknown",
+            denominator_basis="not_applicable",
+            requested_days=None,
+            verified_days=0,
+            unknown_days=None,
+            observed_days=int(scope["observed_days"]),
+            eligible_days=None,
+        ),
+        fields=fields,
+        order=interpretation.order,
+        missingness=missingness,
+        selection=EvidenceSelection(
+            available=available,
+            selected=len(result.rows),
+            omitted=available - len(result.rows),
+            cutoff_tie=cutoff,
+        ),
+        format=EvidenceFormat(
+            locale="en", computed_places=2, rounding=interpretation.display_rounding
+        ),
+        limitations=limits,
+        daily_support=[],
+        route_support=list(result.routes),
+    )
+
+    def value(raw: object) -> NumericEvidence:
+        if raw is None:
+            return NumericEvidence(value=None, absence="no_known_values")
+        if not isinstance(raw, (int, float)) or isinstance(raw, bool):
+            raise ValueError("Analytical evidence requires finite numeric source values.")
+        return NumericEvidence(value=raw, absence=None)
+
+    if not interpretation.grouping:
+        if len(result.rows) != 1:
+            raise ValueError("An aggregate scalar requires exactly one numerical result.")
+        return ScalarResult(**common, kind="scalar", value=value(result.rows[0]["metric_value"]))
+    groups: list[GroupEvidence] = []
+    for row in result.rows:
+        identities = [
+            CategoryIdentity(
+                field_id=dimension,
+                code=str(row[f"{dimension}_code"])
+                if row[f"{dimension}_code"] is not None
+                else None,
+                label=(
+                    str(row[f"{dimension}_label"]) + " [" + str(row[f"{dimension}_code"]) + "]"
+                    if row[f"{dimension}_label"] is not None
+                    else "Missing " + dimension.replace("_", " ")
+                ),
+                status=row[f"{dimension}_status"],
+            )
+            for dimension in interpretation.grouping
+        ]
+        groups.append(
+            GroupEvidence(
+                identity=identities,
+                measures={measure: value(row["metric_value"])},
+                sample_size=int(row["observation_count"]),
+                tied=int(row["equal_value_groups"]) > 1,
+                scoped_count=int(row["flight_count"]),
+                missing_count=int(row["flight_count"]) - int(row["observation_count"]),
+            )
+        )
+    return GroupedResult(**common, kind="grouped", values=groups)
 
 
 def _date_label(value: date | None) -> str | None:

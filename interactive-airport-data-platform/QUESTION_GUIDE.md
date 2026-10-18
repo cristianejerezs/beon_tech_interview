@@ -3,10 +3,12 @@
 Use this guide with the [quickstart](QUICKSTART.md). Examples describe supported
 analysis requests, not guaranteed model responses. Model interpretation can still fail;
 always review the generated report's metric, filters, period, and limitations.
+Reports display the submitted question as a level-two heading before the answer;
+PDF exports place it directly beneath the report title.
 
 ## 1. Use a specific question structure
 
-> For [origin airport] during [period], calculate [one metric], broken down by
+> For [origin airport] during [period], calculate [one metric per section], broken down by
 > [optional grouping], with [optional filter or ranking].
 
 Include:
@@ -15,7 +17,8 @@ Include:
   Avoid "the airport" unless refining a report that already identifies it.
 - **Period:** use 2013 or specific dates within the historical snapshot. ISO dates
   such as `2013-01-01` avoid date-format ambiguity. This is not live flight data.
-- **Metric:** ask for one measure per question, such as flight count or mean departure delay.
+- **Metric:** ask for one measure per section, such as flight count or mean departure delay.
+  V2 accepts up to four related, explicitly labelled analyses in one report.
 - **Breakdown:** state whether you want one total, results by airline, or a monthly trend.
 - **Ranking:** say what "top" means, how many results you want, and the direction.
   For example, "top 5 destinations by flight count, highest first."
@@ -47,12 +50,125 @@ Airport codes in the destination position, such as `ORD`, are destination filter
 not additional supported origin airports. A destination must occur in the supplied
 flight data to produce matching results.
 
-## 3. Choose supported metrics and breakdowns
+## 3. V2 analytical requests
+
+V2 is on by default. Examples include:
+
+- "For JFK in 2013, count distinct destinations, calculate rounded average daily distinct
+  destinations, show those daily averages by weekday, and identify the busiest month by flights."
+- "Compare mean departure delay in January and February 2013 at JFK."
+- "Compare flight counts for March 2013 with the previous month."
+- "Show the departure-delay distribution for LGA in 2013."
+- "Show the relationship between departure and arrival delays from JFK in 2013."
+- "Rank airlines by average daily recorded seat capacity from JFK in 2013."
+- "Across all origins combined, average the per-date distinct destination counts over
+  observed operating days only, rounded half up to a whole number."
+- "Across all origins combined, average daily distinct destinations separately for
+  each weekday, using observed operating days only."
+  Explicit observed-day requests use only dates with recorded scoped flights. Without
+  that selection, daily means still require verified calendar coverage; unknown
+  dates are not silently included as zeros.
+- "Rank all airlines by the number of distinct flight numbers they operate across all recorded dates."
+  This counts each flight number once within its airline, regardless of departure date,
+  origin or destination. It is not a count of recorded departures. Requests for flight
+  counts without this distinct-flight-number definition continue to count source records.
+- "Count distinct observed aircraft by manufacturer and model, not flight frequency."
+
+Daily/weekday means require reviewed complete-day coverage. Without it, a calendar mean is
+unavailable. Use **Edit analytical definition** to explicitly choose observed operating days;
+that is a different, provisional denominator, not inferred completeness. Known-seat capacity
+excludes unknown seat contributions and is a lower-bound proxy, not passenger throughput.
+Weather requests use equal-weight origin-hours. Without verified local weather units, Pearson
+coefficients use recorded numeric values and are labelled provisional; no physical units are
+inferred and unit-dependent precipitation-band comparisons are omitted. Coefficients describe
+association, never causality or significance.
+
+V2 supports at most two grouping roles per section. It includes daily, Monday-week and monthly
+chronological groups; period changes have inclusive endpoints and application-owned previous
+equal-day/month/year rules. Distributions use anchored equal-width bins. A proposed wider bin
+must be accepted explicitly when the initial definition exceeds 100 bins.
+Width proposals respect the query timeout. Ranges or widths that cannot produce exact,
+finite bin indexes and edges require a different width or narrower scope; they are not
+silently rounded, coarsened or sampled.
+
+### Airport counts and readable report details
+
+"Count distinct destinations for each origin airport" groups the recorded flights
+by origin and counts distinct destination codes. The supplied NYC flight file has
+only EWR, JFK and LGA as departure origins; the larger airport reference catalogue
+does not add departure observations for its other airports. Their worldwide
+outgoing connections cannot be inferred from this dataset.
+
+V2 reports display readable calculation details under "How this was calculated"
+and scope/missingness under "Scope and data quality", rather than raw JSON.
+Exact result tables and CSV evidence retain their original values and field IDs.
+
+"Determine the number of distinct destinations connected to all airports" ranks every
+airport that appears as an origin or destination (FAA code from the airport catalogue)
+by its distinct connected airports in either flight direction, and shows a bar chart.
+Each flight links both endpoints, so EWR counts its destinations and a destination such
+as ATL counts the NYC origins that serve it. In Edit interpretation, choose the
+"distinct connected airport count" measure and the "airport" group to get this view;
+"airport" can also group flight count (flights departing from or arriving at the airport).
+
+For a catalogue-wide connection table, ask:
+
+> For every airport in the airport catalogue, count distinct neighbouring airports
+> across both arrivals and departures. Include airports with no recorded connections.
+
+This left-joins the catalogue to the union of recorded origin/destination edges.
+Each neighbour counts once regardless of flight frequency or direction; self-connections
+and missing endpoints are excluded. An observed neighbour code without reference metadata
+still counts as a connection, but does not create an additional catalogue row.
+Zero means no connection observed in the selected file, not no real-world service.
+Airport-code filters choose catalogue rows; date/carrier/other flight filters restrict
+the flights used to form edges while preserving zero-connection catalogue rows.
+Use listing paging to inspect every airport or prepare a full CSV within the
+existing 10,000-row listing limit. This is separate from outgoing-only distinct
+destination counts and does not silently replace them.
+
+"Identify the month with the highest accumulated departure delay" ranks calendar
+months by total positive departure-delay minutes, not average delay or the largest
+individual delay. Early departures contribute zero; missing delays are excluded
+and disclosed. Explicitly request "net departure delay" if early departures should
+offset lateness. Highest/lowest selects one ranked month with tie disclosures.
+
+"Identify the month of the year with the highest accumulated departure delay for all years"
+instead pools all Januaries, all Februaries, etc. (`month_of_year`, codes 01-12 with month
+names), then ranks their total positive delay. Calendar-month rankings (`flight_month`,
+YYYY-MM) keep each year separate. This grouping is also available for compatible counts,
+means and other summary measures; it is not a fixed-question shortcut. Filters still define
+the years included. Only years actually present contribute: a one-year snapshot may produce
+the same winning total under either grouping, without making their meanings equivalent.
+
+Weather/departure-delay correlation is one fixed analytical panel: temperature,
+wind speed, precipitation and visibility against mean departure delay at equal
+origin-hour grain. It is not a flight-level correlation or causal conclusion.
+Valid local transformed-weather unit provenance is required for physical unit labels and
+precipitation-band comparisons, not for provisional Pearson coefficients on recorded values.
+Pearson is dimensionless and invariant to positive linear unit conversions; consistent scales
+and meaningful numeric values are still assumptions, not verified facts.
+The answer explains each coefficient's direction, valid-hour count and the largest absolute
+association among available variables. These findings appear before technical metadata in
+the PDF, and are also derived from saved evidence when opening older weather reports.
+Provider interpretation can still fail strict local validation; no invalid response is executed or
+automatically retried.
+
+Several sections resolve before any main analysis executes. Clarifications are focused, with
+at most three answered unresolved turns per section, then structured correction/removal/restart.
+More than four requested analyses require an explicitly confirmed subset; excluded work never
+runs automatically. For saved composite reports, choose a section or **All sections** in the
+local scope-refinement form. Presentation preferences do not edit analytical evidence.
+
+### Legacy V1 metrics and breakdowns
+
+The following compatibility table applies when the V2 toggle is turned off:
 
 | Metric | Meaning | Supported breakdowns |
 |--------|---------|----------------------|
 | Flight count | Count of matching flight records, not passengers or necessarily completed flights | Any breakdown listed below |
 | Distinct destination count | Count of distinct destination codes among matching flight records | Origin airport, month |
+| Distinct connected airport count | Count of distinct other airports (FAA codes) linked by at least one flight in either direction | Airport (origin or destination), airline, month |
 | Mean departure delay | Average recorded departure delay in minutes | Any breakdown listed below |
 | Mean arrival delay | Average recorded arrival delay in minutes | Any breakdown listed below |
 | Mean distance | Average recorded route distance in miles | Any listed breakdown except aircraft manufacturer and aircraft model |

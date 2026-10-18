@@ -1,0 +1,6 @@
+faa,name,latitude,longitude,altitude,timezone,dst,timezone_name
+JFK,Synthetic Kennedy,40.6,-73.7,13,-5,A,America/New_York
+LGA,Synthetic La Guardia,40.7,-73.8,21,-5,A,America/New_York
+BOS,Synthetic Boston,42.3,-71.0,20,-5,A,America/New_York
+LAX,Synthetic Los Angeles,33.9,-118.4,125,-8,A,America/Los_Angeles
+ZZZ,Synthetic Reference Only,35.0,-90.0,100,-6,A,America/Chicago

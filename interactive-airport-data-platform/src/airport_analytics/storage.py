@@ -88,6 +88,7 @@ class Storage:
                     max_output_tokens INTEGER NOT NULL DEFAULT 0,
                     input_tokens INTEGER,
                     output_tokens INTEGER,
+                    cached_input_tokens INTEGER,
                     reserved_tokens INTEGER NOT NULL DEFAULT 0,
                     status TEXT NOT NULL CHECK(
                         status IN ('reserved', 'settled', 'failed', 'released')
@@ -115,6 +116,7 @@ class Storage:
                 "max_input_tokens": "INTEGER NOT NULL DEFAULT 0",
                 "max_output_tokens": "INTEGER NOT NULL DEFAULT 0",
                 "acceptance_uncertain": "INTEGER NOT NULL DEFAULT 0",
+                "cached_input_tokens": "INTEGER",
             }
             for name, definition in migrations.items():
                 if name not in usage_columns:

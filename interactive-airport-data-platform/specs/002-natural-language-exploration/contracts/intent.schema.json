@@ -1,0 +1,807 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "BinningSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        },
+        "accepted": {
+          "title": "Accepted",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "width",
+        "accepted"
+      ],
+      "title": "BinningSpec",
+      "type": "object"
+    },
+    "ClarificationChoice": {
+      "additionalProperties": false,
+      "properties": {
+        "choice_id": {
+          "minLength": 1,
+          "title": "Choice Id",
+          "type": "string"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "edits": {
+          "items": {
+            "$ref": "#/$defs/ScopeEdit"
+          },
+          "maxItems": 12,
+          "title": "Edits",
+          "type": "array"
+        }
+      },
+      "required": [
+        "choice_id",
+        "label",
+        "edits"
+      ],
+      "title": "ClarificationChoice",
+      "type": "object"
+    },
+    "ClarificationSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "field_id": {
+          "minLength": 1,
+          "title": "Field Id",
+          "type": "string"
+        },
+        "question": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "choices": {
+          "items": {
+            "$ref": "#/$defs/ClarificationChoice"
+          },
+          "maxItems": 8,
+          "title": "Choices",
+          "type": "array"
+        }
+      },
+      "required": [
+        "field_id",
+        "question",
+        "choices"
+      ],
+      "title": "ClarificationSpec",
+      "type": "object"
+    },
+    "ComparisonSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "comparison": {
+          "$ref": "#/$defs/TimeRange"
+        },
+        "baseline_rule": {
+          "default": "explicit",
+          "enum": [
+            "explicit",
+            "previous_equal_days",
+            "previous_month",
+            "previous_year"
+          ],
+          "title": "Baseline Rule",
+          "type": "string"
+        }
+      },
+      "required": [
+        "comparison"
+      ],
+      "title": "ComparisonSpec",
+      "type": "object"
+    },
+    "EntityMention": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "origin",
+            "destination",
+            "airline",
+            "origin_region"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "code_candidate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Code Candidate"
+        }
+      },
+      "required": [
+        "kind",
+        "text",
+        "code_candidate"
+      ],
+      "title": "EntityMention",
+      "type": "object"
+    },
+    "ExplorationOrder": {
+      "additionalProperties": false,
+      "properties": {
+        "field_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "airport",
+                "origin",
+                "destination",
+                "carrier",
+                "airline_name",
+                "tailnum",
+                "aircraft_manufacturer",
+                "aircraft_model",
+                "weather_precipitation_band",
+                "flight_date",
+                "flight_week",
+                "flight_month",
+                "month_of_year",
+                "weekday"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "flight_count",
+                "distinct_flight_number_count",
+                "distinct_destination_count",
+                "distinct_connected_airport_count",
+                "mean_departure_delay",
+                "mean_arrival_delay",
+                "mean_distance",
+                "distinct_aircraft_count",
+                "mean_seats",
+                "weather_context_departure_delay",
+                "departure_delay",
+                "arrival_delay",
+                "distance",
+                "positive_delay_minutes",
+                "net_delay_minutes",
+                "known_reference_seats",
+                "distinct_tailnums",
+                "explicit_flight_frequency"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "source_row_id",
+                "connection_count"
+              ],
+              "type": "string"
+            }
+          ],
+          "title": "Field Id"
+        },
+        "direction": {
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "title": "Direction",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field_id",
+        "direction"
+      ],
+      "title": "ExplorationOrder",
+      "type": "object"
+    },
+    "PairingSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "enum": [
+            "departure_delay",
+            "arrival_delay",
+            "distance"
+          ],
+          "title": "X",
+          "type": "string"
+        },
+        "y": {
+          "enum": [
+            "departure_delay",
+            "arrival_delay",
+            "distance"
+          ],
+          "title": "Y",
+          "type": "string"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "PairingSpec",
+      "type": "object"
+    },
+    "ProposedSharedScope": {
+      "additionalProperties": false,
+      "properties": {
+        "edits": {
+          "items": {
+            "$ref": "#/$defs/ScopeEdit"
+          },
+          "maxItems": 12,
+          "title": "Edits",
+          "type": "array"
+        },
+        "dates": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "ProposedSharedScope",
+      "type": "object"
+    },
+    "RoundingSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "places": {
+          "maximum": 12,
+          "minimum": 0,
+          "title": "Places",
+          "type": "integer"
+        },
+        "mode": {
+          "const": "half_up",
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "places",
+        "mode"
+      ],
+      "title": "RoundingSpec",
+      "type": "object"
+    },
+    "ScopeEdit": {
+      "additionalProperties": false,
+      "properties": {
+        "field_id": {
+          "enum": [
+            "origin",
+            "destination",
+            "carrier",
+            "tailnum",
+            "airline_name",
+            "aircraft_model",
+            "flight_year",
+            "flight_month_number",
+            "departure_delay",
+            "arrival_delay",
+            "distance",
+            "flight_date"
+          ],
+          "title": "Field Id",
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "add",
+            "replace",
+            "remove"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "operator": {
+          "anyOf": [
+            {
+              "enum": [
+                "eq",
+                "neq",
+                "in",
+                "gt",
+                "gte",
+                "lt",
+                "lte",
+                "between"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Operator"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "maxItems": 100,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "field_id",
+        "action",
+        "operator",
+        "value"
+      ],
+      "title": "ScopeEdit",
+      "type": "object"
+    },
+    "SectionProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "position": {
+          "maximum": 4,
+          "minimum": 1,
+          "title": "Position",
+          "type": "integer"
+        },
+        "original_clause": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Original Clause",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "proposed",
+            "needs_clarification",
+            "unsupported"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "enum": [
+                "overall_summary",
+                "grouped_summary",
+                "unique_entity_list",
+                "individual_records",
+                "ranking",
+                "category_comparison",
+                "historical_trend",
+                "period_change",
+                "distribution",
+                "numeric_relationship"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Family"
+        },
+        "operation_id": {
+          "anyOf": [
+            {
+              "enum": [
+                "aggregate",
+                "entity_list",
+                "flight_records",
+                "period_change",
+                "distribution",
+                "flight_relationship",
+                "daily_distinct_mean",
+                "departure_delay_total",
+                "daily_capacity_mean",
+                "aircraft_frequency",
+                "weather_relationship"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Operation Id"
+        },
+        "measure_ids": {
+          "items": {
+            "enum": [
+              "flight_count",
+              "distinct_flight_number_count",
+              "distinct_destination_count",
+              "distinct_connected_airport_count",
+              "mean_departure_delay",
+              "mean_arrival_delay",
+              "mean_distance",
+              "distinct_aircraft_count",
+              "mean_seats",
+              "weather_context_departure_delay",
+              "departure_delay",
+              "arrival_delay",
+              "distance",
+              "positive_delay_minutes",
+              "net_delay_minutes",
+              "known_reference_seats",
+              "distinct_tailnums",
+              "explicit_flight_frequency"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Measure Ids",
+          "type": "array"
+        },
+        "population": {
+          "anyOf": [
+            {
+              "enum": [
+                "flights",
+                "observed_origins",
+                "observed_destinations",
+                "observed_airlines",
+                "airport_reference",
+                "airport_connections"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Population"
+        },
+        "entity_mentions": {
+          "items": {
+            "$ref": "#/$defs/EntityMention"
+          },
+          "title": "Entity Mentions",
+          "type": "array"
+        },
+        "scope_edits": {
+          "items": {
+            "$ref": "#/$defs/ScopeEdit"
+          },
+          "maxItems": 12,
+          "title": "Scope Edits",
+          "type": "array"
+        },
+        "grouping": {
+          "items": {
+            "enum": [
+              "airport",
+              "origin",
+              "destination",
+              "carrier",
+              "airline_name",
+              "tailnum",
+              "aircraft_manufacturer",
+              "aircraft_model",
+              "weather_precipitation_band",
+              "flight_date",
+              "flight_week",
+              "flight_month",
+              "month_of_year",
+              "weekday"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Grouping",
+          "type": "array"
+        },
+        "comparison": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ComparisonSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "binning": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BinningSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pairing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PairingSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "order": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExplorationOrder"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bound": {
+          "anyOf": [
+            {
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Bound"
+        },
+        "rounding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RoundingSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "denominator_basis": {
+          "anyOf": [
+            {
+              "enum": [
+                "verified_calendar_days",
+                "observed_operating_days"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Denominator Basis"
+        },
+        "clarification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClarificationSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unsupported_reason": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unsupported Reason"
+        }
+      },
+      "required": [
+        "position",
+        "original_clause",
+        "status",
+        "family",
+        "operation_id",
+        "measure_ids",
+        "population",
+        "entity_mentions",
+        "scope_edits",
+        "grouping",
+        "comparison",
+        "binning",
+        "pairing",
+        "order",
+        "bound",
+        "rounding",
+        "clarification",
+        "unsupported_reason"
+      ],
+      "title": "SectionProposal",
+      "type": "object"
+    },
+    "TimeRange": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Start"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "End"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "TimeRange",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "else": {
+        "properties": {
+          "sections": {
+            "minItems": 1
+          },
+          "selection_reason": {
+            "type": "null"
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "requires_selection"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sections": {
+            "maxItems": 0
+          },
+          "selection_reason": {
+            "minLength": 1,
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "intent_version": {
+      "const": 2,
+      "title": "Intent Version",
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "proposed",
+        "needs_clarification",
+        "unsupported",
+        "requires_selection"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "shared_scope": {
+      "$ref": "#/$defs/ProposedSharedScope"
+    },
+    "sections": {
+      "items": {
+        "$ref": "#/$defs/SectionProposal"
+      },
+      "maxItems": 4,
+      "title": "Sections",
+      "type": "array"
+    },
+    "selection_reason": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Selection Reason"
+    }
+  },
+  "required": [
+    "intent_version",
+    "status",
+    "shared_scope",
+    "sections",
+    "selection_reason"
+  ],
+  "title": "IntentProposalV2",
+  "type": "object"
+}

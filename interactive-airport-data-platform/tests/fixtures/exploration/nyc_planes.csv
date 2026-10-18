@@ -1,0 +1,5 @@
+tailnum,year,type,manufacturer,model,engines,seats,speed,engine
+N1,2000,Fixed wing,Maker A,Shared,2,100,500,Turbo-fan
+N2,2001,Fixed wing,Maker B,Shared,2,200,NA,Turbo-fan
+N3,2002,Fixed wing,Maker A,Other,2,NA,NA,Turbo-fan
+N4,2003,Fixed wing,NA,NA,2,50,NA,Turbo-fan

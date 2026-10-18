@@ -6,7 +6,7 @@ import re
 
 from airport_analytics.analytics.plan_schema import validate_analysis_plan
 from airport_analytics.analytics.question_validation import validate_question
-from airport_analytics.models import AnalysisPlan
+from airport_analytics.models import AnalysisPlan, ScopeEdit, TypedFilter
 
 AIRLINE_FIELDS = frozenset({"carrier", "airline_name"})
 DATE_FIELDS = frozenset({"flight_year", "flight_month_number", "flight_date"})
@@ -114,6 +114,32 @@ TIME_REMOVAL_CUES = (
     "entire period",
     "entire available period",
 )
+
+
+def apply_scope_edits(
+    previous: list[TypedFilter],
+    edits: list[ScopeEdit],
+) -> list[TypedFilter]:
+    filters = list(previous)
+    for edit in edits:
+        fields = (
+            AIRLINE_FIELDS
+            if edit.field_id in AIRLINE_FIELDS
+            else DATE_FIELDS
+            if edit.field_id == "flight_date" and edit.action == "remove"
+            else {edit.field_id}
+        )
+        if edit.action in {"remove", "replace"}:
+            filters = [item for item in filters if item.field_id not in fields]
+        if edit.action != "remove":
+            if edit.operator is None:
+                raise ValueError("Scope edits require an explicit operator.")
+            filters.append(
+                TypedFilter(field_id=edit.field_id, operator=edit.operator, value=edit.value)
+            )
+        if len(filters) > 12:
+            raise ValueError("The final scope cannot exceed twelve predicates.")
+    return filters
 
 
 def _contains_cue(question: str, cues: tuple[str, ...]) -> bool:

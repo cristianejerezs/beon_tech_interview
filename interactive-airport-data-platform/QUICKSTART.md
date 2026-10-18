@@ -247,6 +247,72 @@ breakdowns, copyable examples, and tips for clarifying or refining a question.
    private reports remain. **Delete private report** removes that private copy.
 8. Select **Sign out** when finished.
 
+**V2 exploration is enabled by default** by the **Use V2 summary exploration** toggle.
+It supports one to four labelled analyses, including summaries, unique entity lists,
+individual-flight listings and the analytical forms below. Turn it off for V1 generation.
+
+For example, ask "List distinct destinations served from JFK" or "Show individual flights from EWR".
+Listings show exact totals and a saved bounded preview, not an implied full population.
+**Load listing page** supports 25/50/100/500 rows with deterministic sorting. Size/sort/scope
+changes and out-of-range positions reset to page one with a notice. Paging never calls the model.
+Saved listings remain browseable even when V1 generation is selected.
+
+**Download saved preview (CSV)** downloads only the saved rows. To export more, choose
+**Listing export rows**, confirm a partial population if needed, then **Prepare listing CSV**.
+The prepared file starts at row one in saved report order and contains at most 10,000 data rows,
+with exact exported/total counts and scope/definition metadata. Null field names are recorded
+separately from empty text; risky spreadsheet text receives a reversible leading apostrophe.
+The table PDF contains the saved preview, not every matching flight.
+
+Changed/missing source files or analytical context disable historical paging and full-listing
+exports without removing saved previews. **Restart listing on current source** fills the question
+form; review it and explicitly select **Generate report** to analyze again. Catalog 2.2's analytical
+definitions invalidate recomputation of older-context reports, not their saved evidence.
+
+### V2 analytical and multi-section workflows
+
+- Ask explicitly for the airport(s), historical period and up to four related analyses.
+  Daily/weekday distinct-destination means, known-seat daily capacity, positive/net delay
+  totals, manufacturer-qualified aircraft frequencies, period changes, distributions and
+  flight-pair/origin-hour weather relationships are locally calculated.
+- Configure `AIRPORT_COVERAGE_PATH` only when reviewed local evidence supports the exact loaded
+  snapshot. The declaration must satisfy the [coverage schema](specs/002-natural-language-exploration/contracts/coverage.schema.json),
+  name known origins, nonoverlapping inclusive intervals/contained gaps, reviewer/passed-check
+  metadata and local documents with matching SHA-256 hashes. No declaration is fabricated or
+  fetched from a network. Invalid, stale or missing evidence leaves coverage unknown.
+- Calendar daily means include verified no-flight days as zero, exclude unknown dates, and
+  never divide by a displayed sample. Without verified days they are unavailable. Use
+  **Edit analytical definition** to explicitly select observed operating days, making a new
+  provisional revision. Weekdays use their own eligible-day counts and exact half-up display.
+- Set `AIRPORT_WEATHER_UNITS_PATH` only for a reviewed JSON declaration with `schema_version: 1`,
+  `weather_sha256`, `units`, `reviewed_by`, `evidence_reference`, `evidence_sha256`.
+  `units` must be exactly `{"temp":"F","wind_speed":"mph","precip":"inches","visib":"miles"}`.
+  The weather-file hash and local evidence-document hash must match. This enables verified
+  weather-unit labels and descriptive precipitation comparisons. Without valid evidence,
+  the four equal-origin-hour Pearson coefficients still use the recorded numeric values,
+  explicitly labelled provisional with unverified units; precipitation-band comparisons
+  are omitted. No conversion or physical unit is inferred. Pearson is dimensionless and
+  unchanged by positive linear unit conversions, but assumes consistent numeric scales and
+  meaningful recorded values. Warnings and unit status persist in saved reports and exports.
+- **Pending analysis** resolves each section before execution. Structured correction targets
+  the focused section; explicit removal preserves the other section IDs. A request exceeding
+  four sections can run only an explicitly confirmed subset, never an automatic report queue.
+- **Refine the scope of selected or all sections** applies explicit local origin/airline/date
+  edits in a new analytical revision. Other sections retain their meaning. Use the analytical
+  section selector for daily denominator, period or bin-definition changes.
+- A runtime fault retains the failed section and its notice. A report with no successful section
+  is not saved. A partially successful report requires exact failed-section acknowledgement
+  before save, sharing or export. Save failures retain unsaved evidence only in the current
+  session; **Save unsaved report** retries persistence without another model call.
+- Saved-evidence ZIPs include each section and a status/scope manifest. To expand listings, set
+  explicit per-section allocations whose combined total is at most 10,000, confirm any partial
+  populations, then prepare the allocated bundle. No download is produced after a technical
+  failure. Daily support and weather pair/density CSVs are included as bounded auxiliary files.
+- Owner-scoped presentation preferences are atomically versioned and currently limited to
+  default/table. They never change evidence or creation time. Refresh after conflicts.
+  Automatic charts, composite chart PDFs, tagged PDFs and integrated visual/accessibility
+  acceptance remain specification 003 work; table PDFs are not claimed accessible/tagged.
+
 Reports and budget state persist in the configured SQLite file across normal restarts.
 Protect that file and its backups; do not commit runtime data. Deleting a private report
 does not delete a separately retained, previously authorized shared artifact.
@@ -299,6 +365,20 @@ still needs a bounded charge and shares the USD 10 budget.
 Restart the app, explicitly select **Groq (hosted, verified free plan)**, and review
 the provider/model/endpoint/data-use notice. The reused `AIRPORT_OPENAI_*` variable names
 refer to the OpenAI-compatible protocol; the key must be from Groq, not OpenAI.
+The sidebar **Groq model** selector offers `openai/gpt-oss-20b` and
+`openai/gpt-oss-120b`. If 20B hits a provider limit, explicitly select 120B, review the
+updated processing notice and submit again only if your free account permits it.
+There is no automatic retry or model fallback. Groq organization/model limits still
+apply, and a different model is not guaranteed to have remaining quota. Selecting it
+does not reset or bypass the application's shared hosted-budget/quota ledger.
+In non-production/development mode only (`production=false`), a verified free-plan
+configuration uses provider-enforced limits
+instead of the additional local monthly request/token allowances. The sidebar explicitly
+shows this policy. Usage, including uncertain reservations, is still recorded; the USD
+spending cap and paid-request safeguards remain enforced. Production and evaluation
+runs retain the local monthly free quotas. This policy does not depend on authentication
+method or enable development sign-in. This policy does not predict
+provider quota availability or enable retries, automatic switching or paid overage.
 To default directly to Groq, set `AIRPORT_MODEL_PROVIDER=groq` and
 `AIRPORT_MODEL_NAME=openai/gpt-oss-20b`.
 
@@ -341,7 +421,7 @@ are documented; do not enable approval flags merely to bypass this gate.
 | Sign-in fails | Check Authlib installation, `[auth]`, issuer/subject claims, and exact redirect URL registration. |
 | Development sign-in is blocked | Set `AIRPORT_PRODUCTION=false` and launch with `--server.address=127.0.0.1`. Do not expose the development server externally. |
 | Model unavailable | Check Ollama is running, `/api/tags` lists the configured model, and the endpoint is correct. There is no automatic fallback. |
-| Provider HTTP 400 or 422 | The provider rejected the request/schema or parameters. Use the current app version; Groq receives a supported output-schema subset while the full schema is validated locally. |
+| Provider HTTP 400 or 422 | The provider rejected the request/schema or parameters. Use the current app version and restart Streamlit after updates. Groq's V2 wire schema removes overlapping integer/number alternatives and merges same-type string enums; the full schema is still validated locally. |
 | Provider HTTP 401/403/404 | Check the API key locally, model permissions, and endpoint/model configuration. Never share the key in logs or chat. |
 | Provider HTTP 429 | Check the provider's request/token limits and wait; the app does not retry automatically. Unknown-acceptance reservations stay held until reconciliation. |
 | Dataset unavailable | Check the working directory, source-data setting, and all five original CSVs. |
@@ -350,7 +430,8 @@ are documented; do not enable approval flags merely to bypass this gate.
 | No records or unsupported question | Broaden filters or ask about supported connectivity, delays, airlines, or aircraft metrics. |
 | Browser shows `Unknown request URL: GET /openai/v1` | This is an API base URL, not a web page. Leave the configured base URL unchanged; use the app to send chat-completions requests. |
 | Provider HTTP 400 | This can mean a rejected request/schema or a generated response that failed provider validation. Share only the app's safe `Code` and `Rejected parameter` details when present, never raw response bodies or keys. `json_validate_failed` identifies a generated-output validation failure. Do not change providers or disable validation to bypass it. |
-| Question says "the airport" without naming one | Specify EWR, JFK, or LGA, or provide an active report with that airport filter. The model should request clarification rather than guess. |
+| Question says "the airport" without naming one | With V2 enabled, a valid ambiguous response opens **Pending analysis** with a focused question. Submit a locally validated choice or a free-text clarification. Three unresolved answered turns lead to guided correction, not unlimited model calls. |
+| V2 says it could not safely interpret the question | Invalid structured output is a provider-output failure, not a valid clarification. Use explicit **Retry interpretation**, structured correction, restart or cancel. No hidden repair or provider switch occurs. Missing coverage or weather-unit evidence needs a local evidence/definition correction, not invented data. |
 
 The snapshot is historical, not live flight data. Weather comparisons are contextual, not
 causal. Live provider/model evaluation, latency baselining, owner retention approval, five

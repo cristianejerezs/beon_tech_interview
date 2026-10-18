@@ -53,12 +53,120 @@ def reserve(
     )
 
 
+def test_provider_only_free_quota_preserves_usage_and_strict_restart(tmp_path):
+    storage = Storage(tmp_path / "development.sqlite")
+    development = BudgetLedger(
+        storage,
+        free_monthly_request_limit=1,
+        free_monthly_token_limit=1,
+        enforce_free_monthly_quotas=False,
+    )
+    first = reserve(development, free=True)
+    development.mark_uncertain(first.reservation_id, "unknown acceptance")
+    second = reserve(development, free=True)
+    assert first.reservation_id != second.reservation_id
+    strict = BudgetLedger(storage, free_monthly_request_limit=1, free_monthly_token_limit=1)
+    with pytest.raises(BudgetExceededError):
+        reserve(strict, free=True)
+
+
+def test_provider_only_free_quota_does_not_disable_spending_guard(tmp_path):
+    development = BudgetLedger(
+        Storage(tmp_path / "spending.sqlite"),
+        monthly_cap_usd=Decimal("0"),
+        enforce_free_monthly_quotas=False,
+    )
+    with pytest.raises(BudgetExceededError):
+        reserve(development, free=False)
+    assert reserve(development, free=True).free_plan
+
+
+def test_clarification_dispatch_respects_prior_month_uncertainty_after_restart(
+    tmp_path,
+    monkeypatch,
+):
+    from dataclasses import replace
+
+    from airport_analytics.analytics.model_client import LangChainPlanClient
+    from airport_analytics.analytics.provider_policy import mark_disclosed
+    from tests.integration.test_exploration_provider import IntentModel
+    from tests.integration.test_model_failure_modes import _hosted_settings
+    from tests.unit.test_exploration_state import ambiguous
+
+    path = tmp_path / "clarification-uncertainty.sqlite3"
+    service = ledger(path)
+    first = reserve(service, at=datetime(2025, 1, 31, tzinfo=UTC))
+    service.mark_uncertain(first.reservation_id, "provider acceptance unknown")
+    model = IntentModel()
+    client = LangChainPlanClient(
+        replace(_hosted_settings(monkeypatch), max_input_tokens=100000),
+        budget=ledger(path),
+        model=model,
+        contract_version=2,
+    )
+    state = {}
+    mark_disclosed(state, client.provider)
+    with pytest.raises(CostUnboundedError):
+        client.generate_clarification(
+            "Count flights at the airport",
+            "JFK",
+            ambiguous(),
+            1,
+            session_state=state,
+        )
+    assert model.calls == 0
+    with Storage(path).read() as connection:
+        row = connection.execute(
+            "SELECT period_start_utc, status FROM usage_reservations"
+        ).fetchone()
+        assert row["period_start_utc"] == "2025-01-01"
+        assert row["status"] == "reserved"
+
+
 def test_shared_cap_counts_reservations_and_settled_usage(tmp_path: Path) -> None:
     service = ledger(tmp_path / "usage.sqlite3", Decimal("0.05"))
     reserve(service)
     reserve(service)
     with pytest.raises(BudgetExceededError):
         reserve(service)
+
+
+@pytest.mark.parametrize(
+    "reported_input,reported_output,charged",
+    [(10, 20, 30), (None, 20, 1020), (10, None, 1010), (None, None, 2000), (1500, 1000, 2500)],
+)
+def test_free_quota_uses_settled_usage_with_per_component_conservative_fallback(
+    tmp_path,
+    reported_input,
+    reported_output,
+    charged,
+):
+    path = tmp_path / "actual-free.sqlite3"
+    service = ledger(path, token_limit=charged + 2000)
+    first = reserve(service, free=True)
+    service.settle(
+        first.reservation_id,
+        input_tokens=reported_input,
+        output_tokens=reported_output,
+    )
+    reopened = ledger(path, token_limit=charged + 2000)
+    reserve(reopened, free=True)
+    with pytest.raises(BudgetExceededError):
+        reserve(reopened, free=True, input_tokens=1, output_tokens=0)
+    assert reopened.get_reservation(first.reservation_id).reserved_tokens == 2000
+
+
+def test_free_quota_keeps_uncertain_reservations_and_request_count(tmp_path):
+    service = ledger(tmp_path / "held-free.sqlite3", token_limit=2030, request_limit=3)
+    first = reserve(service, free=True)
+    service.mark_uncertain(first.reservation_id, "acceptance unknown")
+    second = reserve(service, free=True, input_tokens=10, output_tokens=20)
+    service.settle(second.reservation_id, input_tokens=0, output_tokens=0)
+    third = reserve(service, free=True, input_tokens=10, output_tokens=20)
+    service.settle(third.reservation_id, input_tokens=0, output_tokens=0)
+    with pytest.raises(BudgetExceededError):
+        reserve(service, free=True, input_tokens=0, output_tokens=0)
+    assert service.get_reservation(first.reservation_id).status == "reserved"
 
 
 def test_concurrent_reservations_cannot_exceed_shared_cap(tmp_path: Path) -> None:

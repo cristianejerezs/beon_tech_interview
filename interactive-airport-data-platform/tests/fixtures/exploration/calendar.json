@@ -1,0 +1,8 @@
+{
+  "fixture_only": true,
+  "origin": "JFK",
+  "verified_dates": ["2013-01-01", "2013-01-02", "2013-01-03", "2013-01-07"],
+  "known_gaps": ["2013-01-05"],
+  "observed_but_unknown_dates": ["2013-01-04"],
+  "weather_units": {"temp": "F", "wind_speed": "mph", "precip": "inches", "visib": "miles"}
+}

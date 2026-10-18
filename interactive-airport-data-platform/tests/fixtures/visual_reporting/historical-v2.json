@@ -1,0 +1,56 @@
+{
+  "report_version": 2, "report_id": "report", "analyst_id": "owner",
+  "session_id": "session", "question": "Count flights", "revision": 1,
+  "created_at": "2026-10-18T00:00:00+00:00",
+  "snapshot_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "context_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "versions": {"catalog": "2.0"}, "shared_scope": {}, "removed_sections": [],
+  "sections": [{
+    "section_id": "section", "position": 1, "label": "Count flights",
+    "interpretation": {
+      "request_id": "request", "revision": 1, "section_id": "section",
+      "original_clause": "Count flights", "family": "overall_summary",
+      "operation_id": "aggregate", "measure_ids": ["flight_count"], "population": "flights",
+      "snapshot_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "context_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "definition": {
+        "unit": "flights", "numerator": "source records", "denominator": null,
+        "weighting": "source_record", "additivity": "additive",
+        "match_rules": [], "exclusions": []
+      }
+    },
+    "narrative": "9 flights",
+    "outcome": {
+      "status": "completed",
+      "result": {
+        "result_version": 2, "evidence_version": 2, "kind": "scalar",
+        "report_id": "report", "section_id": "section",
+        "snapshot_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "context_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "definition": {
+          "unit": "flights", "numerator": "source records", "denominator": null,
+          "weighting": "source_record", "additivity": "additive",
+          "match_rules": [], "exclusions": []
+        },
+        "grain": "scalar",
+        "scope": {
+          "filters": [], "requested_period": null, "observed_period": null,
+          "origins": ["JFK"], "coverage_status": "unknown",
+          "denominator_basis": "not_applicable", "requested_days": null,
+          "verified_days": 0, "unknown_days": null, "observed_days": 1, "eligible_days": null
+        },
+        "fields": [{
+          "field_id": "flight_count", "label": "Flights", "role": "numeric",
+          "unit": "flights", "unit_provenance": "catalog"
+        }],
+        "order": [], "missingness": {"filtered_flights": 9},
+        "selection": {"available": 1, "selected": 1, "omitted": 0, "cutoff_tie": false},
+        "format": {"locale": "en", "computed_places": 2, "rounding": null},
+        "limitations": ["Historical synthetic data."], "daily_support": [], "route_support": [],
+        "value": {"value": 9, "absence": null}
+      }
+    }
+  }],
+  "completeness": "complete", "parent_report_id": null,
+  "incomplete_acknowledgement": null, "presentation_preferences": {}, "preference_version": 1
+}

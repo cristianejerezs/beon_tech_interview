@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "provenance": "Application-reviewed conventional names for the three NYC origin codes in the supplied airport reference. Aliases resolve identity only, not source coverage.",
+  "airports": {
+    "kennedy": ["JFK"],
+    "laguardia": ["LGA"],
+    "la guardia": ["LGA"],
+    "newark": ["EWR"]
+  },
+  "airlines": {},
+  "origin_regions": {
+    "new york": ["EWR", "JFK", "LGA"],
+    "nyc": ["EWR", "JFK", "LGA"],
+    "new york city": ["EWR", "JFK", "LGA"]
+  }
+}

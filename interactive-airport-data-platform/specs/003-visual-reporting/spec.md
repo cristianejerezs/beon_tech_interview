@@ -4,11 +4,24 @@
 
 **Created**: 2026-10-17
 
-**Status**: Draft - awaiting owner review; no implementation authorized by this document.
+**Status**: Draft - awaiting owner review; no implementation of this feature (003) is authorized by this document.
+
+**Decision log**: Record future product decisions under [Clarifications](#clarifications);
+implementation choices belong in the plan/contracts and executed results in acceptance records.
 
 **Input**: User accepted automatic, data-appropriate graphs alongside evidence tables, compatible chart switching, honest labels and bounds, and visual PDF exports. Keep two linked specifications and validate them together from ordinary wording through analysis, visualization and export.
 
 ## Clarifications
+
+### Session 2026-10-18
+
+- Q: Should manual PDF accessibility review continue to block visual PDF implementation? A: No. The owner explicitly skips manual PDF screen-reader review while retaining visual PDFs, tagged structure, automated structural checks, visible descriptions, selectable text and visual-quality inspection. Record manual PDF accessibility as NOT ASSESSED, not passed; do not claim reader compatibility or PDF/UA certification. Browser accessibility remains unchanged. Prioritize the accuracy, explanations, graphics, legibility and completeness of generated reports. This decision supersedes the earlier manual PDF reader requirement.
+
+- Q: What should a weather-correlation report show first when it opens? A: Show all four coefficients and plain-language findings first, followed by one selectable weather-variable plot; export the selected plot.
+- Q: How should saving a chart choice behave when the same report is open in two browser tabs? A: Detect conflicting saves, preserve the newer saved view and offer reload or explicit reapply.
+- Q: For a weather report broken down by airport, should the chart show one selected airport or compare several airports together? A: Show one selected airport and weather variable at a time; retain every airport's coefficients in exact evidence and identify the plot selection in PDF.
+- Q: When temperature data cannot produce a weather plot for the selected airport, what should the default view show? A: Keep temperature selected, explain why its plot is unavailable, and allow explicit selection of another variable; do not automatically substitute one.
+- Q: Must the usability-study participants have aviation-domain experience? A: Include both aviation and non-aviation participants with report/analysis experience, and record their backgrounds without identifying them.
 
 ### Session 2026-10-17
 
@@ -106,28 +119,77 @@ An analyst can understand a report without relying on color, hover interactions,
 - **FR-008**: For two categorical dimensions and one numeric measure, default to grouped bars when there are at most eight series and twenty primary categories; otherwise use a labelled heatmap of the returned groups with absent/null cells distinguished from zero. Explain any upstream result truncation.
 - **FR-009**: A chart with one categorical dimension displays at most twenty categories. For larger results, rankings initially show the first twenty in the validated rank order (or fewer if the analytical result bound is smaller), explicitly marking omitted categories and any cutoff tie; unranked results require an explicit selection before plotting. Provide labelled category/series multi-selection by stable code plus name, current-selection counts, apply/reset controls and a table-view option. Reject over-limit selections without losing the prior valid view. Persist applied subsets with the owned report. This release never synthesizes "Other"; even additive regrouping is a separate analytical refinement.
 - **FR-010**: Distribution charts must use the analysis's exact bins, units, inclusion boundaries and counts; adjacent bars indicate numeric intervals, and missingness is separately labelled. Rendering must not choose different bins from those in the evidence.
-- **FR-011**: Period-change reports must show both period values, baseline/comparison labels, and distinctly labelled absolute and relative changes. Do not plot percentages on the same unlabelled scale as counts or minutes; preserve unavailable percentage-change explanations.
+- **FR-011**: Period-change reports must show both period values, baseline/comparison labels, and distinctly labelled absolute and relative changes. The "change summary" is a visible text/value block beside or below the comparison, retained unchanged for bars, paired dots and table views and included in PDF; it is not a separate change chart. Do not plot percentages on the same unlabelled scale as counts or minutes; preserve unavailable percentage-change explanations.
 - **FR-012**: Relationship charts must use paired variables with their respective units and source-row grain. Up to 5,000 valid pairs, show a scatter plot of all pairs; above that, default to a density view of all pairs with twenty equal-width intervals per varying axis and one interval per constant axis. Publish exact cell boundaries/counts and reconcile their sum with the paired population; there are at most 400 cells, not necessarily 400 nonempty cells. Intervals include the lower endpoint and exclude the upper except the last, which includes the observed maximum. A constant-axis interval includes its sole value explicitly. Do not sample silently, fit regression, or imply causation.
 - **FR-013**: Axis choices must not distort conclusions: bars start at zero and retain negative values, quantitative axes are linear by default, and units remain explicit. No 3D effects, broken axes, or dual-axis charts are included in this feature. Small multiples for the same measure share a comparable scale.
 - **FR-014**: Provide a compatible-view selector including table view according to the compatibility matrix below; switching views must not invoke a model, consume model budget, change analytical scope, or recompute a different metric. Preserve stable identities, semantic order, units, periods, missingness and selected population. Show incompatible choices disabled with a visible, programmatically associated reason; do not expose dead unexplained controls. Changing measures, units, bins, time grain, grouping or full-population aggregation is an analytical refinement, not a presentation switch.
 - **FR-015**: Persist the selected compatible view and its population/subset disclosures with an owned saved report under existing retention rules. Older reports without those preferences must open safely with a deterministically selected compatible view, or an explicit missing-evidence explanation.
 - **FR-016**: PDF exports must contain the current selected chart as an actual graphic plus all exact plotted evidence, scope, definitions, legends, limitations and population/subset disclosures. Plotted evidence means the visible category/time values, histogram bins, scatter pairs or density cells, not an unbounded underlying source table. Additional report/supporting-route tables retain their declared analytical bounds and completeness notices. Explicit table view exports its selected evidence table without requiring a chart, but does not omit material scope/definitions. Use the PDF presentation and failure rules below; never silently downgrade a promised visual export.
 - **FR-017**: CSV exports remain data, not chart images. Exported chart evidence must identify columns, units, scope, snapshot and completeness, including any category subset or density/bin transformation; expose exact aggregated cells/bins for distribution and density views. Individual-record exports retain the linked exploration specification's bounds.
-- **FR-018**: Web reports and controls must meet WCAG 2.2 AA, with programmatic chart names, adjacent textual explanations, keyboard-operable controls, visible unobscured focus and no essential meaning dependent only on color or hover. PDF exports must include tagged headings and tables, logical reading order, selectable text and chart descriptions, verified with an actual screen-reader review. Exact values and missingness remain accessible in both formats. Do not claim PDF/UA certification.
+- **FR-018**: Web reports and controls must meet WCAG 2.2 AA, with programmatic chart names, adjacent textual explanations, keyboard-operable controls, visible unobscured focus and no essential meaning dependent only on color or hover. PDF exports must include tagged headings and tables, logical reading order, selectable text and chart descriptions, verified through automated structural checks and visual page inspection. Manual PDF screen-reader review is excluded from this release's acceptance gates by owner decision; record it as NOT ASSESSED. Exact values and missingness remain available in both formats. Do not claim verified PDF reader compatibility or PDF/UA certification.
 - **FR-019**: Chart, saved-report and download ownership checks must remain unchanged. Plotting/exporting must not send source rows, chart data or report content to an external inference/rendering service or introduce unapproved retention or model charges.
 - **FR-020**: Automated checks must compare every plotted value/cell/bin with independently verified report evidence, including scope, chronological/category order, negative/null/zero behavior, ties and displayed bounds. Separately inspect actual browser and PDF rendering for labels, legends, readability, clipping and accessibility; numerical checks alone do not prove usability.
 - **FR-021**: Pass E2E-01 through E2E-09 defined in [002-natural-language-exploration](../002-natural-language-exploration/spec.md#shared-end-to-end-acceptance-cases), covering ordinary wording, analytical results, automatic view, saved report and export, including up to four sections in a composite report. Record actual integrated outcomes only after execution.
 - **FR-022**: Use English interface/chart/accessibility labels, comma thousands separators, a decimal point, unambiguous `YYYY-MM-DD` dates and `YYYY-MM` month labels. Retain full-precision evidence; display counts as integers, computed measures to two decimal places and percentages to two decimal places, consistently across browser and PDF. CSV evidence preserves unrounded numeric values. Preserve source names and codes without transliteration or silent character replacement; disambiguate duplicate names with codes. Category sorting uses declared numerical/time/ranking order or, otherwise, stable code order rather than locale-dependent collation.
 - **FR-023**: Record browser chart-ready and complete-PDF export durations separately from model/query time, with environment, cold/warm conditions, evidence size, chart family and safe failure category. Show loading and explicit recoverable failure states; preserve the report after a failed render/export and allow an explicit retry without another model request. A technical timeout or missing rendering resource must not produce success-shaped or partial output. Log no report contents, values, labels, filters, source rows, questions or credentials. Measure representative timings before proposing numerical product deadlines; this feature does not require queued exports.
-- **FR-024**: Follow the required logical Visual Evidence contract below across browser, saved report, accessible explanations and exports. Missing required evidence must be identified explicitly; never reconstruct unavailable historical evidence from current source data or substitute guessed missingness.
+- **FR-024**: Follow the required logical Visual Evidence contract below across browser, saved report, accessible explanations and exports. Missing required evidence must be identified explicitly; never reconstruct unavailable historical evidence from current source data or substitute guessed missingness. If the original snapshot is unavailable, render any sufficient saved bounded evidence with its original provenance and a source-unavailable notice; disable historical paging/recalculation with a reason. Missing saved plotting evidence requires an explicit missing-evidence explanation and any available table, not a current-source backfill.
 - **FR-025**: Use the missingness/coverage rules below consistently across chart families and formats. Chart preparation must not convert absent/null evidence into zeros or describe min/max observed event dates as proof of complete calendar coverage.
 - **FR-026**: Enforce the inclusive boundary table as fixed release defaults rather than operator-configurable ceilings. Store the rule/evidence version with saved preferences; if a historical preference is incompatible, explain the change and offer a compatible view without changing evidence.
 - **FR-027**: Apply the dependency/release table below. Existing charts may be tested independently, but no integrated feature-release claim is valid until both 002 and 003 pass all nine shared cases and the numerical, visual, export, accessibility and formative-usability gates. Maintain dated executed-outcome records with environment, method, actual result, failures and evidence references; planned/not-run cases are never passes.
 - **FR-028**: A composite report under 002 contains up to four independently labelled analysis sections on a common validated snapshot. Apply visual classification, evidence/subset limits, compatible preferences, accessibility and scope explanations per section, never by combining unrelated measures on one chart. An analytically incomplete report may be saved/exported only with 002's explicit acknowledgement and visible section failure notices. Its PDF must completely render the successful evidence and required disclosures; a technical rendering failure still permits no partial file. Section preferences follow the one parent report's ownership and retention; combined listing exports follow 002's aggregate row bound.
 - **FR-029**: Present 002's AQ-01 through AQ-10 using their approved grains/denominators: scalar cards for overall distinct/average-daily values; ordered Monday-Sunday bars/dots for weekday means; ranked bars for monthly totals, airline activity/capacity and manufacturer/model frequencies. Show daily supporting evidence, unrounded values, requested rounding and all missing/unknown/provisional-rank flags in table/PDF/CSV. AQ-02's explicit half-up whole-number rounding, or the analyst's requested precision, overrides FR-022's default two-decimal measure display only; plots, ordering, ties and calculations still use unrounded evidence. Calendar year-month rankings are explicitly ranked categories, not an inferred chronological trend; weekday averages are ordered categories, not dates.
-- **FR-030**: The predefined weather analysis is one analytical section with a four-variable coefficient summary and precipitation-band comparison. Identify each coefficient's variable, units, origin-hour grain, pair count, excluded coverage and unavailable reason. Plot hourly mean delay versus each selected weather variable using complete origin-hour pairs: full scatter up to 5,000 pairs, full-population density above, with the same rules as other relationships; coefficients always use all eligible pairs before any visual binning. Use labelled separate panels/variable selection, never mixed-unit overlays. Do not infer independence, significance or causation or convert the hour-grain evidence to flight-grain pairs. A coefficient summary may use labelled dots on a fixed -1 to 1 coefficient scale with pair counts beside it; raw weather units remain specific to their own paired panel. This explicit descriptive-correlation extension does not authorize regression or other inference.
+- **FR-030**: The predefined weather analysis is AQ-06 under 002 FR-018/FR-034's numeric-relationship family, not an eleventh request family. It is one analytical section with four centered Pearson product-moment coefficients computed from unrounded origin-hour pairs without rank or other transformations. A precipitation-band comparison is included only when weather units are verified under 002's approved provisional-unit policy; otherwise omit it with the provisional explanation below. Identify each coefficient's variable, units, origin-hour grain, pair count, excluded coverage and unavailable reason, preserving 002's three-pair/positive-variance eligibility and unrounded coefficient tie policy. Plot weather on x and hourly mean departure delay in minutes on y using complete origin-hour pairs: full scatter up to 5,000 pairs, full-population density above, with the same rules as other relationships; coefficients always use all eligible pairs before any visual binning. Use labelled separate panels/variable selection, never mixed-unit overlays. Do not infer independence, significance or causation or convert hour-grain evidence to flight-grain pairs. A coefficient summary may use labelled dots on a fixed -1 to 1 coefficient scale with pair counts beside it; raw weather units remain specific to their own paired panel. This explicit descriptive-correlation extension does not authorize regression or other inference.
+- **FR-031**: Detect presentation-preference saves based on an outdated report preference version. Reject the conflicting save without overwriting the newer saved view or changing analytical evidence; explain the conflict and offer reload or explicit reapply against the latest preferences. Preserve the analyst's unsaved selection for review, but do not silently merge or automatically resubmit it. Ownership checks apply to each read/save.
+
+Trace shared requirements to the current authoritative 002 text rather than earlier drafts:
+
+| Shared contract | Authoritative 002 source |
+|-----------------|--------------------------|
+| Nine E2E cases, including four-section composite | [Shared End-to-End Acceptance Cases](../002-natural-language-exploration/spec.md#shared-end-to-end-acceptance-cases), E2E-01..09 |
+| Ten airport questions, including weather AQ-06 | [Required airport-question support](../002-natural-language-exploration/spec.md#requirements-mandatory), AQ-01..10 and FR-032..037 |
+| Four-section composition and incomplete acknowledgement | FR-023/024 in [Requirements](../002-natural-language-exploration/spec.md#requirements-mandatory) |
+| Weather relationship extension and provisional units | FR-018/034 and approved provisional extension in [Requirements](../002-natural-language-exploration/spec.md#requirements-mandatory) |
+| Ten-report ownership/pruning | FR-027 and saved-report contract in [Requirements](../002-natural-language-exploration/spec.md#requirements-mandatory) |
+| Independent numerical tolerance | [SC-003](../002-natural-language-exploration/spec.md#measurable-outcomes): `max(1e-9, 1e-12 * abs(expected))`, identical to this spec's SC-002 |
+
+Formatting precedence for FR-022/029 is general: approved AQ/analytical-definition rounding
+and explicit analyst-requested precision override the default two-decimal display, without
+changing analytical values, sorting, ties or exported raw precision. Explicit requested
+precision overrides an unqualified default such as AQ-02's half-up whole-number display.
+Weather findings compare available absolute Pearson coefficients within the selected
+airport using unrounded stored values; disclose all equal strongest coefficients. Rounded
+display equality alone does not establish a tie.
 
 ### Default Presentation Rules
+
+Weather panels open with the four-coefficient overview and evidence-derived findings,
+followed by one selected variable's scatter/density plot. Default the variable to temperature
+when no saved selection exists; retain unavailable coefficients and reasons in the overview.
+If temperature has no plottable pair/density evidence for the selected airport, keep it
+selected and show the specific unavailable reason and variable selector, not an automatic
+fallback or a block on the whole report. An unavailable coefficient alone does not prevent
+plotting valid pairs: Pearson eligibility and plot eligibility remain separate.
+The variable selector changes presentation only and persists with the section preference.
+PDF exports include the coefficient overview, findings and currently selected variable plot,
+not all four plots unless a separate future requirement authorizes that layout.
+For an explicit per-airport analysis, select one airport and one variable for plotting;
+the overview shows that airport's four coefficients, while exact evidence retains all
+returned airport/variable coefficients and their separate populations. Default to the first
+airport in stable code order when no saved airport exists. Persist airport and variable
+selection; disclose selected/available airports in browser and exports. Never pool airports
+or redraw a combined coefficient as a presentation-only change.
+Apply 002's approved provisional-unit policy: without verified local weather units,
+retain the coefficients and selected plot with `recorded units (unverified)` weather-axis
+labels and a prominent provisional notice; omit unit-dependent precipitation-band
+comparisons rather than plotting an empty comparison. Verified units retain the full
+comparison. These rules qualify FR-030's precipitation comparison; do not invent physical
+units or reviewed provenance.
+
+Pooled month-of-year (`month_of_year`, January-December across scoped years) is an
+ordered categorical role, not a chronological time series. Use month order for unranked
+comparisons and the validated metric order for explicit rankings; never connect pooled
+months as a historical trend or conflate them with YYYY-MM calendar buckets. Preserve
+the pooled-years disclosure in chart descriptions, tables, saved preferences and exports.
 
 | Analytical result | Default | Compatible alternatives |
 |-------------------|---------|-------------------------|
@@ -154,8 +216,8 @@ Validate the common evidence contract first, then evaluate the following rows in
 | 4 | Period change: baseline/comparison periods, values, counts, absolute/relative change definitions | Declared period-change; two dates in a generic result are insufficient |
 | 5 | Scalar: one defined measure, no grouping dimensions, at most one result row | Ungrouped aggregate; zero rows is empty, not an invented scalar zero |
 | 6 | Time series: exactly one declared temporal dimension and optionally one category series, one measure | Temporal role and calendar grain control classification; order chronologically even if a metric sort was requested. A time-bucket ranking must be an explicit ranked-category analysis, with temporal labels retained, not both intents simultaneously |
-| 7 | Ranked categories: one categorical/ordered-category dimension and explicit ranking intent | One measure, validated rank direction and tie policy |
-| 8 | Categorical comparison: one or two categorical/ordered-category dimensions, one measure | Two ordered categories remain categorical unless explicitly defined as temporal. Preserve declared ordinal order rather than inferring a time series |
+| 7 | Ranked categories: one categorical/ordered-category dimension and explicit ranking intent, including pooled month-of-year | One measure, validated rank direction and tie policy |
+| 8 | Categorical comparison: one or two categorical/ordered-category dimensions, one measure, including weekday and pooled January-December | Two ordered categories remain categorical unless explicitly defined as temporal. Preserve declared ordinal order rather than inferring a time series |
 
 Labels such as "2013-01", "Monday" or "1" do not override the declared role. A grouped result filtered to a single category stays grouped; an ungrouped one-row result is scalar. Mixed-unit measures or unsupported shapes require an explicit explanation and evidence table rather than a guessed shared axis. The declared weather-correlation form in FR-030 is a relationship evidence bundle with a coefficient summary and separate variable panels, not conflicting generic shapes; weekday daily averages are ordered categorical aggregates.
 
@@ -186,13 +248,30 @@ All-zero finite measures are plotted at zero with an explicit all-zero note; zer
 | 20 / 21 categories in one dimension | 20: all plotted; 21: ranking shows first 20 with omission/cutoff disclosure, unranked comparison requires selection |
 | 8 series and 20 primary categories in two categorical dimensions | Both ceilings inclusive: grouped bars; 9 series or 21 primary categories: labelled heatmap of the returned groups |
 | 5,000 / 5,001 valid pairs | 5,000: full scatter; 5,001: full-population density, never first-5,000 truncation |
-| Density grid | Both varying axes: 20 by 20, at most 400 cells; one constant axis: 1 by 20; both constant: 1 by 1; zero-count cells remain distinguishable from unavailable evidence |
+| Density grid | Both varying axes: 20 by 20, at most 400 cells; one constant axis: one interval there and 20 equal-width intervals over the non-constant axis's observed range (1 by 20 or 20 by 1); both constant: 1 by 1. Zero-count cells remain distinguishable from unavailable evidence under the missingness rules below |
 | Maximum finite aggregate/time/category cells | 500 returned analytical groups in total, not 500 per series; analytical truncation must be disclosed before visual subsetting |
 | Distribution | At most 100 validated bins, including zero-count bins, plus separate missing/excluded counts |
 | Scatter and listings | At most 5,000 plotted pairs; listing pages/export retain 002's separate 500-row maximum page and 10,000-row export ceiling |
 | One/zero valid point, group or pair | Use the numeric-eligibility table; no automatic minimum-volume suppression or fabricated values |
 
 These limits do not authorize hiding rows beyond 002's analytical bounds. Density requires evidence covering all valid pairs, not a density computed from a truncated listing. If complete required evidence is unavailable, explain that limitation and offer a supported refinement; do not label a partial density as full population.
+
+Bounds at a glance distinguish the stored analytical selection from its presentation:
+
+| Evidence kind | Analytical/returned bound | Visual bound | Export bound |
+|---------------|---------------------------|--------------|--------------|
+| Primary aggregate | 500 selected groups total per section | One dimension: 20 categories; time series: 8 lines or 20 panels; two categories: grouped bars within 8 series/20 primary, otherwise heatmap within returned groups | Analytical CSV: same selected groups; chart evidence/PDF: exact applied subset, with broader evidence labelled separately |
+| Supporting daily / routes | Separate pools of 500 daily rows and 500 route rows per section under 002 | Supporting evidence, not an expanded primary chart allowance | Same pools and completeness, never another allowance per page/file |
+| Distribution | 100 bins | Same immutable bins including zero counts | All plotted bins and missing/excluded counts |
+| Relationship / weather | All pairs through 5,000; above, complete density per approved variable/origin population | All pairs or exact grid, at most 400 cells | All plotted pairs/cells, no appendix truncation |
+| Listing | Pages of 25/50/100/500 rows | Paginated table, not automatic numeric chart | At most 10,000 listing rows across selected listing sections per combined export under 002 |
+| Composite | Up to four sections on one snapshot | Bounds apply independently per section | One complete document; listing cap remains combined, not multiplied by four |
+
+"Returned" groups here are exactly 002 FR-013's selected analytical result (at most 500),
+not all groups existing in the source. Table pagination navigates that same selection.
+A chart may display fewer only through FR-009's disclosed ranked first-20 default or an
+explicit applied subset; it may not hide other returned groups arbitrarily. The supporting
+table may retain the broader analytical selection with separate subset labels.
 
 For unsupported/over-limit shapes, present the available evidence table and an explicit selection/refinement action. For a browser rendering fault, retain evidence and state that the chart failed; table availability is not chart success. If the table also cannot render, retain the saved report, present an accessible error and explicit retry; offer exports only if independently generated and validated. A PDF failure produces no downloadable partial artifact.
 
@@ -231,6 +310,7 @@ Moving from scatter to density is not exposed as a presentation switch in this r
 - All rendering executes locally within the deployment; no hosted rendering service or report-data transmission is allowed. Specific libraries, process isolation and font packaging are planning decisions, subject to the tagged-PDF and privacy requirements.
 - Default to A4 portrait. If content cannot meet the legibility rules, use A4 landscape; if still insufficient, split labelled panels/legends/tables across pages, repeat headers and preserve shared scales. Do not shrink chart labels or evidence-table text below 10 points.
 - Include full category names/codes in evidence and a readable chart mapping. Wrap or place long labels/legends in linked numbered keys; do not silently truncate labels or overlap legends. Grayscale meaning must remain distinguishable through labels, patterns, symbols or directly annotated values.
+- "Chart description" means both a visible evidence-derived explanation block and a programmatically associated figure alternative describing that same view. They may share wording; neither may introduce independent findings. Derive both from the same Visual Evidence/selection as the web explanation, include them in tagged reading order, and verify the visible block by page inspection and the figure alternative by automated structure checks; alt text alone is insufficient. Manual PDF reader behavior remains NOT ASSESSED.
 - Use embedded fonts covering the actual document text. Preserve selectable text, tags, reading order and table headers through font fallback; never silently replace unsupported characters. Missing glyphs, fonts or rendering resources produce an actionable export error instead of a corrupt/partial PDF.
 - Make the complete validated PDF available only after all required charts, evidence, tags and pages have been generated. No partial PDF download is allowed. Explain failure and preserve the browser report; an explicit retry must not reinterpret the question or incur model charges. Automatic retry is not required.
 
@@ -248,8 +328,8 @@ Moving from scatter to density is not exposed as a presentation switch in this r
 | Dependency or gate | Status at this specification review | Independent validation / release implication |
 |--------------------|-------------------------------------|-----------------------------------------------|
 | 001: source validation, ownership, persisted reports, aggregate results | Core implementation exists; original external release gates remain pending | Existing verified aggregate fixtures can test scalar/category/monthly visuals; this is not certification of the parent release |
-| 002: scope/clarification, entity/record browsing, two-dimensional results | Draft; not implemented by this specification | Browser/listing/clarification integration awaits actual supported evidence |
-| 002: daily/weekly buckets, period changes, bins and paired populations | Draft; no execution evidence for the extension | Isolated chart/evidence fixtures can test presentation; real end-to-end claims remain blocked |
+| 002: scope/clarification, entity/record browsing, two-dimensional results | Implementation and focused execution records exist; see 002 acceptance-results | Reuse validated stored evidence; pending independent/live/external acceptance gates remain pending |
+| 002: daily/weekly buckets, period changes, bins and paired populations | Implemented with local numerical regression records; 003 visual acceptance not yet run | Use actual typed evidence, including provisional weather units and pooled month-of-year; isolated tests do not establish integrated release |
 | 003: visuals, compatibility, tagged PDF, accessibility | Requirements only; not implemented/tested by this review | Existing charts do not establish compliance with the strengthened requirements |
 | Shared E2E-01 through E2E-09 | Not run for these extensions | Both features must pass the same authoritative cases in 002 before integrated release, including four-section composite and partial-outcome handling |
 | Numerical/visual/PDF/accessibility/performance study records | Not run for these extensions | Record actual separate outcomes, environment, versions, dates and failures during implementation; baseline timings are measurements, not a latency threshold |
@@ -272,6 +352,7 @@ This specifies information and invariants, not a technology-specific serialized 
 | Required information | Invariant |
 |----------------------|-----------|
 | Report identity, snapshot identity, evidence/selection-rule version | Every chart, table, explanation, preference and export refers to the same owned evidence version |
+| Report preference version (separate concurrency token) | Presentation saves/exports bind to the owning report's latest preference counter; this counter is not the evidence/selection-rule version or analytical revision and does not change analytical evidence |
 | Declared analytical form, output grain and dimension roles | Scalar, categories, ordered categories and temporal dimensions are explicit; stable codes/identifiers remain distinct from display names |
 | Analytical definition and measure metadata | Include unit, source population, weighting, additivity, numerator/denominator where applicable, exclusions and approved change/bin/pair definitions |
 | Active scope and period | Filters, requested dates, verified coverage bounds/completeness, observed bounds, bucket grain and calendar/time-zone applicability remain separately identified |
@@ -293,8 +374,15 @@ When shape-specific fields do not apply, mark them not applicable; when necessar
 - **SC-003**: All nine shared end-to-end scenarios preserve the same interpretation, scope and numeric meaning across chart, table, saved-report reopening and PDF/CSV evidence, including per-section views and acknowledged incomplete composite reports.
 - **SC-004**: At least twelve PDF examples spanning all chart families, negative/null values, long labels and category/series limits show the selected chart and mandatory scope with no clipped axes, unreadable legends or missing series. Document actual visual inspection results.
 - **SC-005**: Every compatible view switch in acceptance testing makes zero additional model requests, leaves analytical values and scope unchanged, and survives saved-report reopening.
-- **SC-006**: A documented WCAG 2.2 AA assessment of web reports and controls must include actual keyboard/screen-reader checks: every control is named, reachable and operable, and every chart has an accessible name, explanation and exact evidence alternative. PDF review must verify tags, reading order, chart descriptions and table navigation with a screen reader. Record the tested browser, reader and document-viewer versions and outstanding failures; no essential comparison may require color or hover alone and no PDF/UA certification is claimed.
+- **SC-006**: A documented WCAG 2.2 AA assessment of web reports and controls must include actual keyboard/screen-reader checks: every control is named, reachable and operable, and every chart has an accessible name, explanation and exact evidence alternative. PDF review must verify tags, structural reading order, figure descriptions and table-header relationships automatically, and inspect actual pages for legibility and visible descriptions. Manual PDF reader/navigation review is NOT ASSESSED and is not an implementation or release prerequisite. Record tested tool versions and outstanding failures; no essential comparison may require color or hover alone, and no verified PDF reader compatibility or PDF/UA certification is claimed.
 - **SC-007**: Recruit five real participants who use tabular reports or operational/business analysis, not feature implementers. Preassign every participant a category/ranking task, a time-trend task and a distribution/relationship task using fixed reports, questions and independently established answer keys. Each task asks for one evidence-backed observation and one material scope/missingness/subset limitation. For each task separately, at least four of five participants must answer both components correctly without moderator instruction, hints, corrections or task-specific coaching; built-in report explanations and accessibility tools are allowed. Score the first unaided attempt, record assistance separately, and report de-identified per-task results independently of automated correctness. This is a formative usability release gate, not an estimate of population-wide accuracy. After material usability changes or a failed round, repeat the scored round with five new representative participants; retain earlier failures and outcomes.
+
+  Each SC-007 round must include at least one participant with aviation-domain experience
+  and at least one without it; all five satisfy the report/analysis-experience requirement.
+  Record de-identified domain/report background with results, without claiming either
+  subgroup represents its population. Use five new participants after failed/materially
+  changed rounds as already required; do not reuse participants to inflate first-attempt success.
+
 - **SC-008**: Record separate browser/PDF timings and failures for all twelve PDF acceptance examples and the chart-boundary cases, including environment and cold/warm conditions. Fault tests for resource unavailability and an imposed technical timeout must show an explicit recoverable error, preserved report data, no partial download, no report-content telemetry and zero extra model requests. There is no numerical product latency pass/fail target in this draft.
 - **SC-009**: All rows of the shape, numeric-eligibility, boundary and compatibility tables must have acceptance cases, including ambiguous time-like labels, conflicting shape metadata, one category/point/pair, all-null/zero/negative/constant measures, 8/9 and 20/21 series/categories, 5,000/5,001 pairs and all constant-axis grid cases. Every forbidden switch is explained and no test silently changes analysis or mislabels a partial/failed visual as complete.
 - **SC-010**: Browser/PDF/CSV/saved-report checks for missing/unmatched categories, absent/null/zero cells, unknown coverage, partial periods, rounded near-ties and duplicate names must preserve the logical evidence contract with zero undisclosed population, ordering or precision changes.

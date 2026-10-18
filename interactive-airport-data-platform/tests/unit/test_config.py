@@ -4,6 +4,17 @@ from airport_analytics.config import Settings
 from airport_analytics.errors import CostUnboundedError
 
 
+def test_visual_reporting_capability_is_explicit_and_defaults_disabled(monkeypatch):
+    monkeypatch.setenv("AIRPORT_MODEL_PROVIDER", "ollama")
+    monkeypatch.delenv("AIRPORT_VISUAL_REPORTING_ENABLED", raising=False)
+    assert not Settings.from_env(load_file=False).visual_reporting_enabled
+    monkeypatch.setenv("AIRPORT_VISUAL_REPORTING_ENABLED", "true")
+    assert Settings.from_env(load_file=False).visual_reporting_enabled
+    monkeypatch.setenv("AIRPORT_VISUAL_REPORTING_ENABLED", "yes")
+    with pytest.raises(ValueError, match="AIRPORT_VISUAL_REPORTING_ENABLED"):
+        Settings.from_env(load_file=False)
+
+
 def test_unknown_provider_is_rejected(monkeypatch) -> None:
     monkeypatch.setenv("AIRPORT_MODEL_PROVIDER", "other")
     with pytest.raises(ValueError, match="AIRPORT_MODEL_PROVIDER"):

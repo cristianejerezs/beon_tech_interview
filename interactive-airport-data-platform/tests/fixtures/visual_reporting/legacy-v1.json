@@ -1,0 +1,29 @@
+{
+  "report_id": "visual-legacy",
+  "analyst_id": "owner",
+  "session_id": "session",
+  "question": "How many flights are there for visual-legacy?",
+  "analysis_plan": {
+    "status": "ready", "intent": "aggregate", "metric_id": "flight_count",
+    "group_by": [], "filters": [], "time_range": null, "sort": null,
+    "row_limit": 10, "chart_intent": "table",
+    "clarification_question": null, "unsupported_reason": null
+  },
+  "result_payload": {
+    "columns": ["metric_value", "flight_count", "observation_count"],
+    "rows": [{"metric_value": 42, "flight_count": 42, "observation_count": 42}],
+    "scope": {"filters": [], "group_by": [], "period": "2013"},
+    "join_coverage": {},
+    "sample_counts": [{"flight_count": 42, "observation_count": 42}],
+    "glossary": {}
+  },
+  "narrative": "42 flights were observed for visual-legacy.",
+  "definitions": {
+    "metric": "Number of flight records.", "unit": "flights",
+    "population": "Matching flight records.", "numerator": "Matching records",
+    "denominator": "Not applicable", "period": "2013"
+  },
+  "limitations": ["Historical sample only."],
+  "snapshot_id": "snapshot-id",
+  "created_at": "2026-10-18T00:00:00+00:00"
+}

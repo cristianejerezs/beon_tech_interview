@@ -88,7 +88,13 @@ def test_development_reuse_opt_in_shared_faq_and_question_selection(monkeypatch,
     assert not grant.disabled
     assert grant.value is True
     assert not app.error
-    assert all(toggle.value for toggle in app.toggle)
+    assert all(toggle.value for toggle in app.toggle if toggle.label.startswith("Enable "))
+    assert next(
+        toggle for toggle in app.toggle if toggle.label == "Use V2 summary exploration"
+    ).value
+    next(toggle for toggle in app.toggle if toggle.label == "Use V2 summary exploration").set_value(
+        False
+    ).run()
 
     identity = resolve_development_identity(production=False, server_address="127.0.0.1")
     report = make_report(
@@ -97,7 +103,7 @@ def test_development_reuse_opt_in_shared_faq_and_question_selection(monkeypatch,
     repository = ReportRepository(Storage(tmp_path / "development.sqlite3"))
     repository.save_report(report, identity)
     app.session_state["active_report_id"] = report.report_id
-    monkeypatch.setattr(product_app, "render_report", lambda *args: None)
+    monkeypatch.setattr(product_app, "render_report", lambda *args, **kwargs: None)
     app.run()
     next(button for button in app.button if button.label == "Create shared copy").click().run()
     assert not app.error
@@ -179,19 +185,45 @@ def test_groq_is_explicitly_selectable_in_development(monkeypatch, tmp_path) -> 
     monkeypatch.setenv("AIRPORT_OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
     monkeypatch.setenv("AIRPORT_HOSTED_FREE_PLAN", "true")
     monkeypatch.setattr(product_app, "_executor", lambda *args: SimpleNamespace())
-    monkeypatch.setattr(
-        product_app,
-        "LangChainPlanClient",
-        lambda *args, **kwargs: SimpleNamespace(
-            provider=ProviderDescriptor("groq", "openai/gpt-oss-20b", "unknown")
-        ),
-    )
+    selected_settings = []
+
+    def client(settings, **kwargs):
+        selected_settings.append(settings)
+        return SimpleNamespace(
+            provider=ProviderDescriptor(settings.model_provider, settings.model_name, "unknown")
+        )
+
+    monkeypatch.setattr(product_app, "LangChainPlanClient", client)
     app = AppTest.from_function(_development_app).run()
     app.button[0].click().run()
     app.radio[0].set_value("groq").run()
     assert not app.error
     assert any("api.groq.com" in warning.value for warning in app.warning)
+    assert any("provider limits only" in caption.value for caption in app.caption)
     assert not next(button for button in app.button if button.label == "Generate report").disabled
+    selector = next(item for item in app.selectbox if item.label == "Groq model")
+    assert selector.value == "openai/gpt-oss-20b"
+    assert selector.options == ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
+    selector.set_value("openai/gpt-oss-120b").run()
+    assert not app.exception
+    assert not app.error
+    assert selected_settings[-1].model_name == "openai/gpt-oss-120b"
+    assert selected_settings[-1].hosted_free_plan is True
+    assert any(
+        "openai/gpt-oss-120b" in warning.value and "api.groq.com" in warning.value
+        for warning in app.warning
+    )
+    next(
+        toggle
+        for toggle in app.toggle
+        if toggle.label == "I understand and acknowledge hosted processing"
+    ).set_value(False).run()
+    assert next(button for button in app.button if button.label == "Generate report").disabled
+    app.radio[0].set_value("ollama").run()
+    app.radio[0].set_value("groq").run()
+    assert next(item for item in app.selectbox if item.label == "Groq model").value == (
+        "openai/gpt-oss-120b"
+    )
 
 
 def test_selecting_saved_report_immediately_enables_correct_follow_up(
@@ -205,7 +237,7 @@ def test_selecting_saved_report_immediately_enables_correct_follow_up(
     _configure_development(monkeypatch, tmp_path, "127.0.0.1")
     monkeypatch.setattr(product_app, "_executor", lambda *args: SimpleNamespace())
     monkeypatch.setattr(product_app, "LangChainPlanClient", lambda *args, **kwargs: Mock())
-    monkeypatch.setattr(product_app, "render_report", lambda *args: None)
+    monkeypatch.setattr(product_app, "render_report", lambda *args, **kwargs: None)
     identity = resolve_development_identity(production=False, server_address="127.0.0.1")
     repository = ReportRepository(Storage(tmp_path / "development.sqlite3"))
     first = make_report("first", identity.analyst_id, "past-session")
@@ -214,6 +246,9 @@ def test_selecting_saved_report_immediately_enables_correct_follow_up(
     repository.save_report(second, identity)
     app = AppTest.from_function(_development_app).run()
     app.button[0].click().run()
+    next(toggle for toggle in app.toggle if toggle.label == "Use V2 summary exploration").set_value(
+        False
+    ).run()
     assert app.checkbox[0].disabled
     history = next(
         select for select in app.selectbox if select.label == "Open one of your saved reports"
@@ -271,9 +306,10 @@ def test_normal_sign_in_defaults_respect_deployment_reuse_policy(
     app = AppTest.from_function(_development_app).run()
     assert not app.exception
     assert not app.error
-    assert len(app.toggle) == 2
-    assert all(toggle.value is expected for toggle in app.toggle)
-    assert all(toggle.disabled is not expected for toggle in app.toggle)
+    reuse_toggles = [toggle for toggle in app.toggle if toggle.label.startswith("Enable ")]
+    assert len(reuse_toggles) == 2
+    assert all(toggle.value is expected for toggle in reuse_toggles)
+    assert all(toggle.disabled is not expected for toggle in reuse_toggles)
     events = ConsentRepository(Storage(tmp_path / "development.sqlite3"))
     session_id = app.session_state["airport_session_id"]
     grant = events.latest_event(identity, session_id, "faq")

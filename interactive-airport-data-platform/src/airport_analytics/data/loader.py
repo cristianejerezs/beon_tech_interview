@@ -4,16 +4,20 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 import duckdb
 
-from airport_analytics.data.catalog import DATASETS
+from airport_analytics.data.catalog import DATASETS, EXPLORATION_CATALOG_VERSION
 from airport_analytics.data.validation import build_snapshots, measure_join_coverage
 from airport_analytics.errors import DatasetUnavailableError
 from airport_analytics.models import DatasetSnapshot
+from airport_analytics.observability.timing import timed_stage
 
 
 @dataclass(frozen=True)
@@ -24,6 +28,18 @@ class SnapshotManifest:
     flight_period_start: str
     flight_period_end: str
     origin_airports: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SemanticContext:
+    context_id: str
+    snapshot_id: str
+    coverage_status: Literal["missing", "unverified"]
+    coverage_sha256: str | None
+    unit_provenance: tuple[tuple[str, str], ...]
+    catalog_version: str
+    alias_version: str
+    rules_version: str
 
 
 class DatasetLoader:
@@ -46,6 +62,64 @@ class DatasetLoader:
             )
         except OSError as exc:
             raise DatasetUnavailableError("Source fingerprint could not be verified.") from exc
+
+    def semantic_context(
+        self,
+        manifest: SnapshotManifest,
+        *,
+        coverage_path: str | Path | None = None,
+        unit_provenance: Mapping[str, str] | None = None,
+        catalog_version: str = EXPLORATION_CATALOG_VERSION,
+        alias_version: str | None = None,
+        rules_version: str = "2.0",
+    ) -> SemanticContext:
+        coverage_hash = None
+        try:
+            if coverage_path is not None:
+                path = Path(coverage_path)
+                if path.exists():
+                    coverage_hash = self._sha256(path)
+        except OSError as exc:
+            raise DatasetUnavailableError("Coverage context could not be verified.") from exc
+        status: Literal["missing", "unverified"] = (
+            "missing" if coverage_hash is None else "unverified"
+        )
+        units = tuple(
+            sorted(
+                (
+                    unit_provenance
+                    if unit_provenance is not None
+                    else {
+                        "flight_distance": "unverified",
+                        "weather": "unverified",
+                    }
+                ).items()
+            )
+        )
+        if alias_version is None:
+            alias_version = self._sha256(Path(__file__).with_name("entity_aliases.json"))
+        material = {
+            "snapshot_id": manifest.snapshot_id,
+            "coverage_status": status,
+            "coverage_sha256": coverage_hash,
+            "unit_provenance": units,
+            "catalog_version": catalog_version,
+            "alias_version": alias_version,
+            "rules_version": rules_version,
+        }
+        context_id = hashlib.sha256(
+            json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        return SemanticContext(
+            context_id=context_id,
+            snapshot_id=manifest.snapshot_id,
+            coverage_status=status,
+            coverage_sha256=coverage_hash,
+            unit_provenance=units,
+            catalog_version=catalog_version,
+            alias_version=alias_version,
+            rules_version=rules_version,
+        )
 
     @staticmethod
     def _quote_path(path: Path) -> str:
@@ -71,6 +145,7 @@ class DatasetLoader:
                 "use this snapshot."
             )
 
+    @timed_stage("source_validation")
     def register_views(self, connection: duckdb.DuckDBPyConnection) -> SnapshotManifest:
         try:
             return self._register_views(connection)
@@ -133,6 +208,8 @@ class DatasetLoader:
         )
         if period[0] is None or period[1] is None:
             raise DatasetUnavailableError("The flight dataset has no usable date range.")
+        if dict(self.fingerprint()) != checksums:
+            raise DatasetUnavailableError("The source changed while its snapshot was being loaded.")
         return SnapshotManifest(
             snapshot_id=snapshot_id,
             datasets=tuple(snapshots),

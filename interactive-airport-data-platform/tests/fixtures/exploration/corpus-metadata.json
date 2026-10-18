@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "corpus_version": "development-candidate-1",
+  "status": "development",
+  "independent_gold_frozen": false,
+  "review_records": [],
+  "provenance": "Agent-authored synthetic development scaffolding. Not independently labelled or frozen held-out acceptance material.",
+  "required_unambiguous": 100,
+  "required_per_family": 10,
+  "required_negative": 20,
+  "required_airport_question_variants_per_case": 3,
+  "external_gates": ["two independent human reviewers", "adjudication", "version freeze"]
+}

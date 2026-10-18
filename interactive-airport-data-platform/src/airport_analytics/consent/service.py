@@ -12,7 +12,7 @@ from airport_analytics.consent.repository import (
 )
 from airport_analytics.errors import ConsentError
 from airport_analytics.history.repository import ReportRepository
-from airport_analytics.models import ReportContent, SharedArtifact
+from airport_analytics.models import SavedReport, SharedArtifact
 
 CONSENT_STATE_KEY = "airport_reuse_consent"
 PURPOSES: tuple[ConsentPurpose, ...] = ("faq", "system_improvement")
@@ -94,7 +94,7 @@ class ConsentService:
     def create_shared_artifact(
         self,
         identity: AnalystIdentity,
-        report: ReportContent,
+        report: SavedReport,
         purpose: ConsentPurpose,
         state: MutableMapping[str, object],
     ) -> SharedArtifact:

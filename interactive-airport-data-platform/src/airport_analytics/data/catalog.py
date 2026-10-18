@@ -7,6 +7,354 @@ from typing import Literal
 
 SCHEMA_VERSION = "1.1"
 
+EXPLORATION_CATALOG_VERSION = "2.7"
+ExplorationOperation = Literal[
+    "aggregate",
+    "entity_list",
+    "flight_records",
+    "period_change",
+    "distribution",
+    "flight_relationship",
+    "daily_distinct_mean",
+    "departure_delay_total",
+    "daily_capacity_mean",
+    "aircraft_frequency",
+    "weather_relationship",
+]
+ExplorationMeasure = Literal[
+    "flight_count",
+    "distinct_flight_number_count",
+    "distinct_destination_count",
+    "distinct_connected_airport_count",
+    "mean_departure_delay",
+    "mean_arrival_delay",
+    "mean_distance",
+    "distinct_aircraft_count",
+    "mean_seats",
+    "weather_context_departure_delay",
+    "departure_delay",
+    "arrival_delay",
+    "distance",
+    "positive_delay_minutes",
+    "net_delay_minutes",
+    "known_reference_seats",
+    "distinct_tailnums",
+    "explicit_flight_frequency",
+]
+ExplorationDimension = Literal[
+    "airport",
+    "origin",
+    "destination",
+    "carrier",
+    "airline_name",
+    "tailnum",
+    "aircraft_manufacturer",
+    "aircraft_model",
+    "weather_precipitation_band",
+    "flight_date",
+    "flight_week",
+    "flight_month",
+    "month_of_year",
+    "weekday",
+]
+
+
+@dataclass(frozen=True)
+class ExplorationDefinition:
+    unit: str
+    weighting: str
+    additivity: Literal["additive", "non_additive"]
+    dimensions: frozenset[str]
+    required_tables: frozenset[str] = frozenset()
+
+
+_V2_DATES = frozenset({"flight_date", "flight_week", "flight_month", "month_of_year"})
+_V2_COMMON = _V2_DATES | {
+    "origin",
+    "destination",
+    "carrier",
+    "airline_name",
+    "tailnum",
+    "aircraft_manufacturer",
+    "aircraft_model",
+    "weather_precipitation_band",
+}
+EXPLORATION_MEASURES: dict[str, ExplorationDefinition] = {
+    "departure_delay": ExplorationDefinition(
+        "minutes", "source_record", "non_additive", frozenset()
+    ),
+    "arrival_delay": ExplorationDefinition("minutes", "source_record", "non_additive", frozenset()),
+    "distance": ExplorationDefinition("miles", "source_record", "non_additive", frozenset()),
+    "flight_count": ExplorationDefinition(
+        "flights", "source_record", "additive", _V2_COMMON | {"airport"}
+    ),
+    "distinct_flight_number_count": ExplorationDefinition(
+        "distinct_flight_numbers", "distinct_carrier_flight_number", "non_additive", _V2_COMMON
+    ),
+    "distinct_destination_count": ExplorationDefinition(
+        "destinations", "distinct_destination", "non_additive", _V2_DATES | {"origin"}
+    ),
+    "distinct_connected_airport_count": ExplorationDefinition(
+        "connected_airports",
+        "distinct_neighbour",
+        "non_additive",
+        _V2_DATES | {"airport", "carrier", "airline_name"},
+    ),
+    "mean_departure_delay": ExplorationDefinition("minutes", "flight", "non_additive", _V2_COMMON),
+    "mean_arrival_delay": ExplorationDefinition("minutes", "flight", "non_additive", _V2_COMMON),
+    "mean_distance": ExplorationDefinition(
+        "miles", "flight", "non_additive", _V2_COMMON - {"aircraft_manufacturer", "aircraft_model"}
+    ),
+    "distinct_aircraft_count": ExplorationDefinition(
+        "aircraft", "distinct_tailnum", "non_additive", _V2_COMMON
+    ),
+    "mean_seats": ExplorationDefinition(
+        "seats", "flight", "non_additive", _V2_COMMON, frozenset({"planes"})
+    ),
+    "weather_context_departure_delay": ExplorationDefinition(
+        "minutes",
+        "flight",
+        "non_additive",
+        _V2_DATES | {"origin", "weather_precipitation_band"},
+        frozenset({"weather"}),
+    ),
+    "positive_delay_minutes": ExplorationDefinition(
+        "minutes", "source_record", "additive", _V2_COMMON
+    ),
+    "net_delay_minutes": ExplorationDefinition("minutes", "source_record", "additive", _V2_COMMON),
+    "known_reference_seats": ExplorationDefinition(
+        "seats_per_day",
+        "equal_day",
+        "non_additive",
+        frozenset({"carrier", "airline_name", "origin"}),
+        frozenset({"planes"}),
+    ),
+    "distinct_tailnums": ExplorationDefinition(
+        "aircraft",
+        "distinct_tailnum",
+        "non_additive",
+        _V2_DATES | {"origin", "aircraft_manufacturer", "aircraft_model"},
+        frozenset({"planes"}),
+    ),
+    "explicit_flight_frequency": ExplorationDefinition(
+        "flights",
+        "source_record",
+        "additive",
+        _V2_DATES | {"origin", "aircraft_manufacturer", "aircraft_model"},
+        frozenset({"planes"}),
+    ),
+}
+_V2_AGGREGATES = frozenset(
+    {
+        "flight_count",
+        "distinct_flight_number_count",
+        "distinct_destination_count",
+        "mean_departure_delay",
+        "mean_arrival_delay",
+        "mean_distance",
+        "distinct_aircraft_count",
+        "mean_seats",
+        "weather_context_departure_delay",
+    }
+)
+EXPLORATION_OPERATIONS: dict[str, frozenset[str]] = {
+    "aggregate": _V2_AGGREGATES | {"distinct_connected_airport_count"},
+    "period_change": _V2_AGGREGATES,
+    "entity_list": frozenset(),
+    "flight_records": frozenset(),
+    "distribution": frozenset({"departure_delay", "arrival_delay", "distance"}),
+    "flight_relationship": frozenset({"departure_delay", "arrival_delay", "distance"}),
+    "daily_distinct_mean": frozenset({"distinct_destination_count"}),
+    "departure_delay_total": frozenset({"positive_delay_minutes", "net_delay_minutes"}),
+    "daily_capacity_mean": frozenset({"known_reference_seats"}),
+    "aircraft_frequency": frozenset({"distinct_tailnums", "explicit_flight_frequency"}),
+    "weather_relationship": frozenset({"mean_departure_delay"}),
+}
+
+
+def summary_metric(measure_id: str) -> MetricDefinition:
+    extra = {
+        "positive_delay_minutes": (
+            "SUM(CASE WHEN f.dep_delay IS NOT NULL THEN greatest(f.dep_delay, 0) END)",
+            "COUNT(f.dep_delay)",
+            "minutes",
+        ),
+        "net_delay_minutes": ("SUM(f.dep_delay)", "COUNT(f.dep_delay)", "minutes"),
+        "distinct_tailnums": (
+            "COUNT(DISTINCT CASE WHEN p.tailnum IS NOT NULL THEN f.tailnum END)",
+            "COUNT(CASE WHEN p.tailnum IS NOT NULL THEN f.tailnum END)",
+            "aircraft",
+        ),
+        "explicit_flight_frequency": (
+            "COUNT(CASE WHEN p.tailnum IS NOT NULL THEN f.column00 END)",
+            "COUNT(CASE WHEN p.tailnum IS NOT NULL THEN f.column00 END)",
+            "flights",
+        ),
+    }
+    if measure_id in extra:
+        expression, observations, unit = extra[measure_id]
+        return MetricDefinition(
+            measure_id,
+            expression,
+            observations,
+            measure_id.replace("_", " "),
+            unit,
+            "filtered historical flights",
+            None,
+            None,
+        )
+    legacy_id = {
+        "distinct_aircraft_count": "aircraft_activity_count",
+        "mean_seats": "mean_aircraft_seats",
+        "weather_context_departure_delay": "mean_delay_by_weather_context",
+    }.get(measure_id, measure_id)
+    if measure_id not in EXPLORATION_OPERATIONS["aggregate"]:
+        raise ValueError("This measure is not an approved summary metric.")
+    return METRICS[legacy_id]
+
+
+CONNECTED_ENDPOINTS_OBSERVATION = (
+    "COUNT(CASE WHEN f.origin IS NOT NULL AND f.dest IS NOT NULL AND f.origin <> f.dest THEN 1 END)"
+)
+
+
+def summary_observation_expression(measure_id: str) -> str:
+    if measure_id == "distinct_destination_count":
+        return "COUNT(f.dest)"
+    if measure_id == "distinct_connected_airport_count":
+        return CONNECTED_ENDPOINTS_OBSERVATION
+    if measure_id == "distinct_aircraft_count":
+        return "COUNT(f.tailnum)"
+    if measure_id == "weather_context_departure_delay":
+        return "COUNT(CASE WHEN w.origin IS NOT NULL THEN f.dep_delay END)"
+    return summary_metric(measure_id).observation_expression
+
+
+EXPLORATION_FAMILIES: dict[str, frozenset[str]] = {
+    "aggregate": frozenset(
+        {
+            "overall_summary",
+            "grouped_summary",
+            "ranking",
+            "category_comparison",
+            "historical_trend",
+        }
+    ),
+    "entity_list": frozenset({"unique_entity_list"}),
+    "flight_records": frozenset({"individual_records"}),
+    "period_change": frozenset({"period_change"}),
+    "distribution": frozenset({"distribution"}),
+    "flight_relationship": frozenset({"numeric_relationship"}),
+    "daily_distinct_mean": frozenset(
+        {
+            "overall_summary",
+            "grouped_summary",
+            "category_comparison",
+            "ranking",
+        }
+    ),
+    "departure_delay_total": frozenset(
+        {
+            "overall_summary",
+            "grouped_summary",
+            "ranking",
+            "category_comparison",
+            "historical_trend",
+        }
+    ),
+    "daily_capacity_mean": frozenset({"ranking", "grouped_summary", "category_comparison"}),
+    "aircraft_frequency": frozenset({"ranking", "grouped_summary", "category_comparison"}),
+    "weather_relationship": frozenset({"numeric_relationship"}),
+}
+
+
+def exploration_definition(
+    operation: str,
+    measures: list[str],
+    population: str = "flights",
+) -> ExplorationDefinition | None:
+    if operation == "entity_list" and population == "airport_connections":
+        return ExplorationDefinition(
+            "connected airports",
+            "distinct_neighbour",
+            "non_additive",
+            frozenset(),
+        )
+    if operation in {"entity_list", "flight_records"}:
+        return ExplorationDefinition(
+            "entities" if operation == "entity_list" else "records",
+            "distinct_code" if operation == "entity_list" else "source_record",
+            "non_additive",
+            frozenset(),
+        )
+    if not measures:
+        return None
+    if operation == "daily_distinct_mean":
+        return ExplorationDefinition(
+            "destinations_per_day", "equal_day", "non_additive", frozenset({"origin", "weekday"})
+        )
+    if operation == "weather_relationship":
+        return ExplorationDefinition(
+            "minutes",
+            "equal_origin_hour",
+            "non_additive",
+            frozenset({"origin"}),
+            frozenset({"weather"}),
+        )
+    if operation == "flight_relationship":
+        return ExplorationDefinition("paired_units", "source_record", "non_additive", frozenset())
+    return EXPLORATION_MEASURES[measures[0]]
+
+
+def validate_exploration_combination(
+    operation: str, measures: list[str], grouping: list[str]
+) -> None:
+    if operation not in EXPLORATION_OPERATIONS:
+        raise ValueError("Unknown exploration operation.")
+    allowed = EXPLORATION_OPERATIONS[operation]
+    required_count = 2 if operation == "flight_relationship" else (0 if not allowed else 1)
+    if len(measures) != required_count or len(set(measures)) != len(measures):
+        raise ValueError("Incorrect or repeated operation measures.")
+    if not set(measures).issubset(allowed):
+        raise ValueError("Unsupported operation and measure combination.")
+    if len(grouping) > 2 or len(set(grouping)) != len(grouping):
+        raise ValueError("Grouping requires at most two distinct roles.")
+    if {"carrier", "airline_name"}.issubset(grouping) or len(set(grouping) & _V2_DATES) > 1:
+        raise ValueError("Duplicate grouping roles.")
+    if operation in {"entity_list", "flight_records", "distribution", "flight_relationship"}:
+        compatible = not grouping
+    elif operation != "aggregate" and (
+        "airport" in grouping or "distinct_connected_airport_count" in measures
+    ):
+        compatible = False
+    elif operation == "daily_distinct_mean":
+        compatible = set(grouping).issubset({"origin", "weekday"})
+    elif operation == "weather_relationship":
+        compatible = set(grouping).issubset({"origin"})
+    elif operation == "aircraft_frequency":
+        identities = set(grouping) & {"aircraft_manufacturer", "aircraft_model"}
+        compatible = len(identities) == 1
+        compatible = compatible and set(grouping).issubset(
+            _V2_DATES | {"origin", "aircraft_manufacturer", "aircraft_model"}
+        )
+    elif operation == "daily_capacity_mean":
+        compatible = bool(set(grouping) & {"carrier", "airline_name"})
+        compatible = compatible and set(grouping).issubset({"carrier", "airline_name", "origin"})
+    else:
+        compatible = all(
+            set(grouping).issubset(EXPLORATION_MEASURES[measure].dimensions) for measure in measures
+        )
+    if not compatible:
+        raise ValueError("Unsupported operation and grouping combination.")
+
+
+def validate_exploration_population(operation: str, family: str, population: str) -> None:
+    if family not in EXPLORATION_FAMILIES[operation]:
+        raise ValueError("Request family is incompatible with the operation.")
+    if (operation == "entity_list") != (population != "flights"):
+        raise ValueError("Population is incompatible with the operation.")
+
+
 SOURCE_TEXT_FIELDS = {
     "flights": frozenset({"carrier", "tailnum", "origin", "dest"}),
     "airports": frozenset({"faa", "name", "dst", "timezone_name"}),
@@ -208,6 +556,27 @@ _ALL_DIMENSIONS = frozenset(DIMENSIONS)
 _FLIGHT_DIMENSIONS = _ALL_DIMENSIONS - {"aircraft_manufacturer", "aircraft_model"}
 
 METRICS: dict[str, MetricDefinition] = {
+    "distinct_flight_number_count": MetricDefinition(
+        metric_id="distinct_flight_number_count",
+        expression=(
+            "COUNT(DISTINCT CASE WHEN f.carrier IS NOT NULL AND f.flight IS NOT NULL "
+            "THEN (f.carrier, f.flight) END)"
+        ),
+        observation_expression=(
+            "COUNT(CASE WHEN f.carrier IS NOT NULL AND f.flight IS NOT NULL THEN 1 END)"
+        ),
+        description="Unique flight numbers within each airline, counted once across scoped dates.",
+        unit="distinct_flight_numbers",
+        population="Distinct airline and flight-number pairs among matching flight records.",
+        numerator="Distinct non-missing airline and flight-number pairs",
+        denominator=None,
+        allowed_dimensions=_ALL_DIMENSIONS,
+        caveats=(
+            "Repeated dates, origins and destinations do not create additional flight numbers.",
+            "This counts flight numbers, not operated departures or source rows.",
+            "Missing airline codes or flight numbers are excluded, not counted as a flight.",
+        ),
+    ),
     "flight_count": MetricDefinition(
         metric_id="flight_count",
         expression="COUNT(*)",
@@ -230,6 +599,24 @@ METRICS: dict[str, MetricDefinition] = {
         denominator=None,
         allowed_dimensions=frozenset({"origin", "flight_month"}),
         caveats=("The reported destinations are available in the supporting result rows.",),
+    ),
+    "distinct_connected_airport_count": MetricDefinition(
+        metric_id="distinct_connected_airport_count",
+        expression="COUNT(DISTINCT f.neighbour_airport)",
+        observation_expression="COUNT(DISTINCT f.column00)",
+        description=(
+            "Number of distinct other airports (FAA codes) connected by at least one flight "
+            "in either direction."
+        ),
+        unit="connected_airports",
+        population="Flight records with two different non-missing airport codes.",
+        numerator="Distinct airport codes reached from or arriving at the airport",
+        denominator=None,
+        allowed_dimensions=frozenset({"flight_month", "carrier"}),
+        caveats=(
+            "Each flight connects its origin and destination; both airports count the other.",
+            "Self-connections and flights with a missing airport code are excluded.",
+        ),
     ),
     "mean_departure_delay": MetricDefinition(
         metric_id="mean_departure_delay",

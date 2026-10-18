@@ -10,6 +10,10 @@
 
 ## Clarifications
 
+### Session 2026-10-18
+
+- Cross-spec study decision, recorded in [003 Clarifications](../003-visual-reporting/spec.md#clarifications): each five-person round includes aviation and non-aviation participants with report/analysis experience; record de-identified backgrounds.
+
 ### Session 2026-10-17
 
 - Q: Should one question support multiple independent analyses? A: Support up to four analyses in a single composite report, with an individually defined result and scope for each analysis.
@@ -209,7 +213,7 @@ Never automatically retry or switch providers. An analyst may explicitly retry a
 
 **Analytical definitions and supported dimensions**
 
-In this table, common flight dimensions are origin, destination, carrier/airline name, tail number, aircraft manufacturer/model, precipitation context and daily/weekly/monthly departure-date bucket. A grouping uses at most two distinct dimension roles; do not duplicate carrier and airline name or two calendar grains as separate dimensions. Reference requirements apply even when introduced only by a filter. For measures not requiring a successful weather match, precipitation grouping retains a distinct unmatched-weather category rather than applying the weather-delay measure's exclusion.
+In this table, common flight dimensions are origin, destination, carrier/airline name, tail number, aircraft manufacturer/model, precipitation context and daily/weekly/monthly departure-date bucket or pooled month-of-year. Calendar year-month (`flight_month`, YYYY-MM) is distinct from month-of-year (`month_of_year`, 01-12 with names, pooled across scoped years). Explicit month-of-year/all-years wording selects the pooled role; an unqualified highest-month question retains calendar year-month. Never invent absent years or substitute per-year winners for pooled totals. A grouping uses at most two distinct dimension roles; do not duplicate carrier and airline name or two calendar grains as separate dimensions. Reference requirements apply even when introduced only by a filter. For measures not requiring a successful weather match, precipitation grouping retains a distinct unmatched-weather category rather than applying the weather-delay measure's exclusion.
 
 | Measure | Calculation, grain and exclusions | Allowed dimensions |
 |---------|---------------------------------|--------------------|
@@ -249,18 +253,42 @@ The following are mandatory supported questions, not a replacement for the ten r
 | AQ-04 Overall | Identify the month with the highest number of flights | Flight counts per calendar year-month, descending rank, all tied maxima disclosed |
 | AQ-05 Delays | Identify the month with the highest accumulated departure delay | Positive delay minutes per year-month by default; signed net only as an explicit alternative |
 | AQ-06 Delays | Analyze the correlation between departure delay and weather conditions by cross-referencing the departure delay data with the weather dataset | FR-034 origin-hour Pearson summary for four variables, descriptive precipitation comparison, matching and excluded evidence |
-| AQ-07 Airlines | Create a ranking of airlines based on the number of flights they operate | Count filtered source flight records per carrier, enriched names and rank ties |
+| AQ-07 Airlines | Create a ranking of airlines based on the number of distinct flight numbers they operate | Owner clarification: count each non-missing flight number once within its airline across all scoped dates, regardless of origin/destination; enriched names and rank ties. Ordinary flight-record counts retain their existing meaning. |
 | AQ-08 Airlines | Create a ranking of airlines based on the daily availability of seats | FR-035 average daily recorded-flight known-seat capacity, common date denominator, daily evidence and provisional ranking flags where incomplete |
 | AQ-09 Airplanes | Determine the most common plane manufacturer | Distinct observed aircraft per matched manufacturer by default, tie/missing-reference disclosures |
 | AQ-10 Airplanes | Identify the most common plane model | Distinct observed aircraft per manufacturer-qualified model by default, tie/missing-reference disclosures |
 
 Weather correlations use the centered Pearson definition: sum of paired deviations' products divided by the square root of the product of the two sums of squared deviations. Use unrounded pairs and return an unavailable value for insufficient/constant evidence. The three-pair threshold is an eligibility rule, not statistical sufficiency or significance. Unmatched hours, hours without known delays, and per-variable missing weather values are reported separately; complete-pair denominators may differ across variables.
 
+Approved provisional extension: when local weather units cannot be verified, compute Pearson
+on recorded numeric values with unverified weather-axis labels and a prominent provisional
+warning. Do not infer physical units, perform unit conversions or fabricate reviewed provenance.
+Pearson is dimensionless and invariant under positive linear unit conversions; consistent
+scales and meaningful numeric values remain assumptions. Omit unit-dependent precipitation-band
+comparisons until units are verified. Persist this status and its limitations in history and
+exports; the verified path retains the full FR-034 panel.
+
 Verified-day eligibility must be grounded in validated source coverage, not inferred from a missing flight row. When completeness is unknown, a partial verified-day mean is labelled as such and may be unavailable if no days can be verified. For incomplete seat days, known seat sums are a lower-bound proxy only for recorded-flight reference capacity, not evidence of actual offered/bookable seats. Negative seat values are invalid data, not contributions to the capacity sum.
 
 For the explicitly selected observed-operating-day alternative, destination means use dates with at least one matching flight; weekday means use those operating dates within each weekday. Airline-capacity comparisons use one common set of dates with at least one matching flight across the selected airlines, not each airline's own operating dates; no-flight airline dates in that observed-date set contribute zero recorded-flight capacity, while unknown seat contributions remain unknown under FR-035. Label this as recorded activity on observed dates, not verified complete-day availability. Preserve requested/verified/observed-date counts and the selected denominator basis in Interpretation and Visual Evidence. Changing denominator basis is an analytical revision, never a chart preference.
 
 Compute all approved two-stage metrics and coefficients over their complete eligible populations before applying evidence-display bounds. Daily supporting aggregates retain the 500-group per-section bound with explicit completeness; bounded supporting rows do not become the mean's denominator. Hour-pair visual evidence follows 003's scatter/full-density bounds, not the flight-list export limit. A weather relationship panel uses the source's exact origin/time_hour match key, not the viewer's time zone; this authorized join grain does not add general intraday time-series analysis. All ten cases require independent source-coverage and weather-unit validation during planning/implementation; no complete-day guarantee is claimed by this draft.
+
+### Evidence-bound table
+
+These bounds distinguish evidence kinds, not independent allowances per category or repeated collection. Full eligible populations determine calculations before evidence selection.
+
+| Evidence kind | Fixed bound and allocation |
+|---------------|----------------------------|
+| Primary aggregate result | One pool of at most 500 selected groups per section; all table pages/aggregate exports refer to that same selection |
+| Supporting daily aggregates | One separate pool of at most 500 rows per section, pooled across every airline/origin/weekday/date and supporting daily collection; chronological date then stable category-code order; disclose exact total/selected/omitted rows |
+| Supporting routes | One separate pool of at most 500 route rows per section, stable origin/destination-code order and explicit completeness |
+| Distribution | At most 100 immutable validated bins per section; not multiplied by categories |
+| Flight relationship | All pairs up to 5,000, otherwise full-population density of at most 20-by-20 cells; no sampling |
+| Predefined weather relationship | One pair/density population per approved variable and optional origin breakdown, using the same 5,000-pair/20-by-20 rule per population; four variables still constitute one section |
+| Listings | Page size 25/50/100/500; listing exports at most 10,000 logical rows across selected listing sections per combined export, allocated explicitly |
+
+Separate supporting pools do not expand the primary selected result or authorize extra listing rows. Daily supporting selections never determine a mean's denominator. The existing per-section bounds apply across representations, not anew to each page or file.
 
 **Corpus and usability methodology**
 
@@ -271,6 +299,7 @@ Compute all approved two-stage metrics and coefficients over their complete elig
 - Ambiguous cases must preserve known constraints and ask about the actual unresolved distinction; entity ambiguity passes by offering valid candidates and awaiting a choice, never by guessing the expected entity. Unsupported cases pass only through the correct explained boundary without execution. Score numerical correctness for every produced section/result, including results from incorrectly interpreted requests; wrong-scope numbers do not become valid merely because they are internally consistent.
 - Composite evaluation includes one through four sections, a five-section boundary, shared/overridden scope, clarification in multiple sections, stale responses, and runtime partial-report acknowledgement. These are additional acceptance cases, not a replacement for any of the ten family quotas.
 - Human sessions are separate formative evidence using the participant/task rules in SC-006. Record actual unassisted/assisted outcomes and repeat after material usability fixes; no fabricated participants or population-wide accuracy claims.
+- Each five-person round includes at least one participant with aviation-domain experience and at least one without; all have tabular-report or operational/business-analysis experience. Record de-identified domain/report background with outcomes. Five new participants are required after failed rounds or material fixes; do not claim subgroup-level or population-wide representativeness.
 
 **Saved-report contract and cross-spec release consistency**
 

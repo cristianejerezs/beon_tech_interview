@@ -3,7 +3,11 @@
 **Branch**: Actual Git branch `main`; feature identifier `002-natural-language-exploration` (the setup script's feature label is not evidence of a checked-out branch).
 **Date**: 2026-10-17
 **Spec**: [spec.md](spec.md)
-**Status**: Phase 0 research and Phase 1 design complete; implementation and acceptance not performed.
+**Status**: V2 local analytical and composite implementation is available with bounded
+clarification/correction, snapshot-bound evidence, exports and atomic owner-scoped preferences.
+V1 generation/history compatibility remains. Task-specific verification and remaining evaluation,
+human and integrated 003 gates are recorded in [tasks](tasks.md) and the
+[acceptance record](acceptance-results.md); no integrated release approval is claimed.
 
 ## Summary
 
@@ -24,6 +28,8 @@ Use a versioned V2 interpretation envelope, application-owned section plans and 
 **Constraints**: USD 10 shared UTC-month paid inference/tracing cap, free quotas, uncertainty reconciliation, no retries/fallback without explicit authorized action; max 2,000 trimmed Unicode code points per submitted question/clarification; one to four sections; three answered clarification turns/section; at most two grouping roles; 500 result groups/section; 25/50/100/500 page sizes; 10,000 listing export rows/file across selected sections; 100 bins; 5,000 scatter pairs or full density evidence. Existing 500-route evidence bound remains disclosed.
 **Scale/Scope**: Supplied snapshot baseline: 277,977 flight records, 1,458 airport references, 16 airline references, 3,322 plane references and 26,112 weather records; NYC origins and 2013 historical flight dates. Revalidate counts/hash at run time; these are not completeness assertions.
 
+**Evidence allocation**: Follow the authoritative [evidence-bound table](spec.md#evidence-bound-table): one primary 500-group pool, one separate pooled 500-row daily-support allowance and one separate 500-row route allowance per section. No per-airline/origin/weekday multiplication; denominator computations remain full-population. Pair/density, bin and listing bounds are separately defined evidence kinds.
+
 ## Constitution Check
 
 Gates apply before research and again after design.
@@ -35,7 +41,7 @@ Gates apply before research and again after design.
 | III: Reproducibility | Pass by design | Snapshot/coverage/catalog/alias/rule versions, parameterized owned queries, immutable saved evidence, independent oracle and frozen corpus |
 | IV: Honest communication | Pass by design | Unknown/partial/zero distinct; provisional seat rankings; association not causation; 003 consumes explicit evidence, no fabricated charts or partial PDF success |
 | V: Question-driven explainability | Pass by design | Ten reusable families and AQ definitions; names, paraphrases, clarification and corrections rather than sentence whitelist |
-| Privacy, ownership, budget | Pass by design | Existing owner repository/consent/usage gates retained; no source rows or private report content in model prompts or telemetry; safe incomplete-report flow |
+| Privacy, ownership, budget | Pass by design | Existing owner repository/consent/usage gates retained; no source rows or private report content in inference prompts or operational telemetry; optional separately disclosed LangSmith tracing follows 001 and the evidence contract; safe incomplete-report flow |
 | Workflow/evidence gates | Pass by design | No code/test/provider/analyst success claimed; phase-specific contracts and release prerequisites documented below |
 
 No constitutional exception is introduced. The previously approved default-on session choices and guarded development identity remain unchanged; they do not establish retention approval or legal consent.
@@ -58,7 +64,8 @@ specs\002-natural-language-exploration\
   checklists\requirements.md
 ```
 
-`tasks.md` is a subsequent `/speckit-tasks` deliverable, not generated in this phase. A custom reviewer checklist is also still pending; its earlier command stopped before generation because this plan did not exist.
+The subsequent [task breakdown](tasks.md) and [reviewer checklist](checklists/exploration.md)
+are available. Reviewer checklist completion records requirements review, not runtime acceptance.
 
 ### Source Code (existing paths and proposed additions)
 

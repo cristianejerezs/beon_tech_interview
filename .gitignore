@@ -10,6 +10,7 @@ venv/
 env/
 beon/
 dist/
+build/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
@@ -18,6 +19,7 @@ dist/
 !.env.example
 interactive-airport-data-platform/.streamlit/secrets.toml
 interactive-airport-data-platform/var/
+interactive-airport-data-platform/specs/
 
 # Jupyter
 .ipynb_checkpoints/

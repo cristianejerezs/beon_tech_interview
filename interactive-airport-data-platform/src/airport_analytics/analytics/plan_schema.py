@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 from airport_analytics.data.catalog import DIMENSIONS, FIELDS, METRICS
 from airport_analytics.errors import InvalidPlanError
-from airport_analytics.models import AnalysisPlan
+from airport_analytics.models import AnalysisPlan, IntentProposalV2
 
 SCHEMA_PATH = (
     Path(__file__).resolve().parents[3]
@@ -21,6 +21,13 @@ SCHEMA_PATH = (
     / "001-airport-analytics-platform"
     / "contracts"
     / "analysis-plan.schema.json"
+)
+INTENT_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "specs"
+    / "002-natural-language-exploration"
+    / "contracts"
+    / "intent.schema.json"
 )
 
 
@@ -134,3 +141,19 @@ def validate_analysis_plan(
         if plan.time_range.start is None and plan.time_range.end is None:
             raise InvalidPlanError("A time range must include a start or end date.")
     return plan
+
+
+def validate_intent_proposal(response: str | dict[str, Any]) -> IntentProposalV2:
+    payload = _json_object(response)
+    validator = Draft202012Validator(
+        _load_schema(str(INTENT_SCHEMA_PATH.resolve())), format_checker=FormatChecker()
+    )
+    error = next(validator.iter_errors(payload), None)
+    if error is not None:
+        raise InvalidPlanError(
+            "The model response does not match the approved intent schema."
+        ) from error
+    try:
+        return IntentProposalV2.model_validate(payload)
+    except ValidationError as exc:
+        raise InvalidPlanError("The model response is not a valid exploration proposal.") from exc

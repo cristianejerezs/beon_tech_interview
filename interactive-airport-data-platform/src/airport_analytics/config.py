@@ -69,6 +69,9 @@ class Settings:
     production: bool
     retention_policy_approved: bool
     development_sign_in: bool = False
+    coverage_path: Path | None = None
+    weather_units_path: Path | None = None
+    visual_reporting_enabled: bool = False
 
     @classmethod
     def from_env(cls, *, env_file: str | Path | None = ".env", load_file: bool = True) -> Settings:
@@ -145,12 +148,19 @@ class Settings:
             deployment_monthly_budget_usd=budget,
             database_path=Path(os.getenv("AIRPORT_DATABASE_PATH", "var/airport_analytics.sqlite3")),
             source_data_dir=Path(os.getenv("AIRPORT_SOURCE_DATA_DIR", "source_data")),
+            coverage_path=Path(os.environ["AIRPORT_COVERAGE_PATH"])
+            if os.getenv("AIRPORT_COVERAGE_PATH")
+            else None,
+            weather_units_path=Path(os.environ["AIRPORT_WEATHER_UNITS_PATH"])
+            if os.getenv("AIRPORT_WEATHER_UNITS_PATH")
+            else None,
             query_timeout_seconds=_int_env("AIRPORT_QUERY_TIMEOUT_SECONDS", 30),
             model_timeout_seconds=_int_env("AIRPORT_MODEL_TIMEOUT_SECONDS", 60),
             shared_reuse_enabled=(_bool_env("AIRPORT_SHARED_REUSE_ENABLED") or development_sign_in),
             production=production,
             retention_policy_approved=_bool_env("AIRPORT_RETENTION_POLICY_APPROVED"),
             development_sign_in=development_sign_in,
+            visual_reporting_enabled=_bool_env("AIRPORT_VISUAL_REPORTING_ENABLED"),
         )
 
     def validate_model_selection(self) -> None:
